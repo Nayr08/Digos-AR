@@ -52,7 +52,7 @@ function HomeScreen({ go, open }: { go: (s: Screen) => void; open: (d: Destinati
   return <div className="screen home-screen">
     <Photo spot={destinations[0]} className="home-backdrop">
       <div className="image-shade" />
-      <div className="home-top"><GlassIcon label="Menu"><Menu size={19} /></GlassIcon><div className="home-location"><small>Current location</small><span><MapPin size={13} /> Digos City <ChevronDown size={14} /></span></div><div className="avatar-glass">DR</div></div>
+      <div className="home-top"><GlassIcon label="Menu"><Menu size={19} /></GlassIcon><div className="home-location"><small>Current location</small><span><MapPin size={13} /> Digos City <b className="location-chevron"><ChevronDown size={13} /></b></span></div><div className="avatar-glass">DR</div></div>
       <div className="home-copy"><Logo inverse /><p>Explore Digos City</p><h1>Discover Digos<br /><em>Through AR</em></h1></div>
       <label className="glass-search"><Search size={19} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search tourist spots..." /><button onClick={() => go('explore')} aria-label="Search"><ChevronRight size={18} /></button></label>
       <div className="home-categories">{['Nature', 'Adventure', 'Culture', 'History'].map((c, i) => { const Icon = [Leaf, Compass, Medal, History][i]; return <button className={category === c ? 'active' : ''} onClick={() => setCategory(c)} key={c}><Icon size={18} /><span>{c}</span></button>; })}</div>
@@ -121,7 +121,7 @@ function ProfileScreen({ go }: { go: (s: Screen) => void }) {
 }
 
 function BottomNav({ active, go }: { active: Screen; go: (s: Screen) => void }) {
-  return <nav className="bottom-nav" aria-label="Main navigation">{nav.map(({ screen, label, icon: Icon }) => <button key={screen} className={`${screen === 'ar' ? 'ar-nav' : ''} ${active === screen ? 'active' : ''}`} onClick={() => go(screen)}><span><Icon size={screen === 'ar' ? 25 : 20} /></span><small>{label}</small></button>)}</nav>;
+  return <nav className={`bottom-nav ${active === 'home' ? 'home-glass-nav' : ''}`} aria-label="Main navigation">{nav.map(({ screen, label, icon: Icon }) => <button key={screen} className={`${screen === 'ar' ? 'ar-nav' : ''} ${active === screen ? 'active' : ''}`} onClick={() => go(screen)}><span><Icon size={screen === 'ar' ? 25 : 20} /></span><small>{label}</small></button>)}</nav>;
 }
 
 export default function DigosAR() {
