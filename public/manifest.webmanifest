@@ -1,0 +1,25 @@
+{
+  "name": "DigosAR — Explore Digos City",
+  "short_name": "DigosAR",
+  "description": "Discover Digos City tourist spots, quests, and augmented-reality experiences.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#071A12",
+  "theme_color": "#071A12",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

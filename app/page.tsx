@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft, Award, Box as Cube, Camera, CheckCircle2, ChevronRight, Church,
-  Clock3, Compass, Expand, Filter, Flashlight, Footprints, Gamepad2, Gift, Heart,
+  Clock3, Compass, Filter, Flashlight, Footprints, Gamepad2, Gift,
   History, Home, Image, Info, Landmark, Leaf, LockKeyhole, LogOut, Map, MapPin, Medal,
   Navigation, PlayCircle, Route, Scan, Search, Settings, Sparkles, Star, Trophy, UserRound,
   Volume2,
@@ -21,6 +21,9 @@ type Screen = 'home' | 'explore' | 'details' | 'ar' | 'quest' | 'quiz' | 'achiev
 type ProfileData = { display_name: string; total_xp: number; level: number };
 type DashboardStats = { spots_visited: number; quizzes_completed: number; badges_earned: number };
 type RecentTrail = { slug: string; status: 'resume' | 'completed'; updatedAt: number };
+
+const protectedScreens = new Set<Screen>(['home', 'quest', 'quiz', 'profile', 'achievements', 'navigation']);
+const linkableScreens = new Set<Screen>(['home', 'explore', 'quest', 'profile', 'navigation']);
 
 const destinations = fallbackDestinations;
 
@@ -80,30 +83,13 @@ function ExploreScreen({ open, spots }: { open: (d: Destination) => void; spots:
   </div>;
 }
 
-function DetailsScreen({ spot, go, userId }: { spot: Destination; go: (s: Screen) => void; userId?: string }) {
-  const [favorite, setFavorite] = useState(false);
-  useEffect(() => {
-    // oxlint-disable-next-line react/react-compiler
-    if (!userId || !spot.id) { setFavorite(false); return; }
-    let active = true;
-    void supabase.from('favorites').select('tourist_spot_id').eq('user_id', userId).eq('tourist_spot_id', spot.id).maybeSingle().then(({ data }) => { if (active) setFavorite(Boolean(data)); });
-    return () => { active = false; };
-  }, [userId, spot.id]);
-  const toggleFavorite = async () => {
-    if (!userId) { go('profile'); return; }
-    if (!spot.id) return;
-    const next = !favorite;
-    setFavorite(next);
-    const { error } = next
-      ? await supabase.from('favorites').insert({ user_id: userId, tourist_spot_id: spot.id })
-      : await supabase.from('favorites').delete().eq('user_id', userId).eq('tourist_spot_id', spot.id);
-    if (error) setFavorite(!next);
-  };
-  return <div className="screen detail-screen"><Photo spot={spot} className="detail-hero"><div className="image-shade" /><div className="detail-top"><GlassIcon label="Back" onClick={() => go('explore')}><ArrowLeft size={20} /></GlassIcon><div><GlassIcon label="Expand image"><Expand size={18} /></GlassIcon><GlassIcon label={favorite ? 'Remove favorite' : 'Save favorite'} active={favorite} onClick={() => void toggleFavorite()}><Heart size={18} fill={favorite ? 'currentColor' : 'none'} /></GlassIcon></div></div><div className="detail-image-title"><small>{spot.type} · {spot.distance}</small><h1>{spot.name}</h1></div></Photo>
+function DetailsScreen({ spot, go }: { spot: Destination; go: (s: Screen) => void }) {
+  return <div className="screen detail-screen"><Photo spot={spot} className="detail-hero"><div className="image-shade" /><div className="detail-top"><GlassIcon label="Back" onClick={() => go('explore')}><ArrowLeft size={20} /></GlassIcon></div><div className="detail-image-title"><small>{spot.type} · {spot.distance}</small><h1>{spot.name}</h1></div></Photo>
     <article className="info-sheet"><span className="sheet-handle" aria-hidden="true" /><div className="spot-meta"><p><MapPin size={13} /> {spot.location}</p><span>+100 XP</span></div><h1>{spot.name}</h1><div className="fact-row"><div><Leaf size={17} /><span><small>Category</small><strong>{spot.type}</strong></span></div><div><Clock3 size={17} /><span><small>Best time</small><strong>{spot.best}</strong></span></div><div><Footprints size={17} /><span><small>Distance</small><strong>{spot.distance}</strong></span></div></div>
-      <section className="story"><small>ABOUT</small><h2>A place worth knowing</h2><div className="floating-actions"><button onClick={() => go('quest')}><Gamepad2 size={18} /> Quest</button><button onClick={() => go('navigation')}><Navigation size={18} fill="currentColor" /> Go</button></div><p>{spot.description}</p></section>
+      <section className="story"><small>ABOUT</small><h2>A place worth knowing</h2><p>{spot.description}</p></section>
       <section className="story-columns"><div><History size={19} /><h3>History</h3><p>{spot.history}</p></div><div><Medal size={19} /><h3>Cultural significance</h3><p>{spot.culture}</p></div></section>
       <div className="media-preview"><Photo spot={spot}><PlayCircle size={34} /><span><small>MULTIMEDIA PREVIEW</small><strong>Watch the local story</strong></span></Photo><button onClick={() => go('model')}><Cube size={18} /> View 3D Model</button></div>
+      <div className="detail-bottom-actions"><button onClick={() => go('quest')}><Gamepad2 size={18} /> Quest</button><button onClick={() => go('navigation')}><Navigation size={18} fill="currentColor" /> Go</button></div>
     </article>
   </div>;
 }
@@ -219,7 +205,7 @@ function BottomNav({ active, go }: { active: Screen; go: (s: Screen) => void }) 
 }
 
 export default function DigosAR() {
-  const [screen, setScreen] = useState<Screen>('home');
+  const [screen, setScreen] = useState<Screen>('explore');
   const [spots, setSpots] = useState<Destination[]>(destinations);
   const [spot, setSpot] = useState(destinations[0]);
   const [previous, setPrevious] = useState<Screen>('home');
@@ -243,9 +229,9 @@ export default function DigosAR() {
     }, 650);
   };
   const go = (next: Screen) => {
-    if (next === 'profile' && !user) {
+    if (protectedScreens.has(next) && !user) {
       setTransitionLoading(true);
-      window.setTimeout(() => window.location.assign('/login'), 650);
+      window.setTimeout(() => window.location.assign(`/login?next=${next}`), 650);
       return;
     }
     if (next === 'ar') {
@@ -317,7 +303,15 @@ export default function DigosAR() {
       if (!active) return;
       const currentUser = data.session?.user ?? null;
       setUser(currentUser);
-      if (currentUser && new URLSearchParams(window.location.search).get('view') === 'profile') setScreen('profile');
+      const requestedView = new URLSearchParams(window.location.search).get('view') as Screen | null;
+      const requested = requestedView && linkableScreens.has(requestedView) ? requestedView : null;
+      if (currentUser) {
+        setScreen(requested ?? 'home');
+      } else if (requested && !protectedScreens.has(requested)) {
+        setScreen(requested);
+      } else {
+        window.location.replace(`/login?next=${requested ?? 'home'}`);
+      }
     }).finally(() => { if (active) setAuthLoading(false); });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user ?? null));
     return () => { active = false; listener.subscription.unsubscribe(); };
@@ -343,7 +337,7 @@ export default function DigosAR() {
     setActionLoading(true);
     try {
       await supabase.auth.signOut({ scope: 'local' });
-      setScreen('home');
+      setScreen('explore');
     } finally {
       setActionLoading(false);
     }
@@ -360,7 +354,7 @@ export default function DigosAR() {
   let content: React.ReactNode;
   if (screen === 'home') content = <HomeScreen go={go} open={open} openAR={openAR} spots={spots} recentTrail={recentTrail} />;
   else if (screen === 'explore') content = <ExploreScreen open={open} spots={spots} />;
-  else if (screen === 'details') content = <DetailsScreen spot={spot} go={go} userId={user?.id} />;
+  else if (screen === 'details') content = <DetailsScreen spot={spot} go={go} />;
   else if (screen === 'ar') content = <ARScreen spot={spot} go={go} back={() => go(previous === 'ar' ? 'home' : previous)} onRecognized={unlockQuest} />;
   else if (screen === 'navigation') content = <NavigationScreen spot={spot} go={go} />;
   else if (screen === 'model') content = <ModelScreen spot={spot} go={go} />;

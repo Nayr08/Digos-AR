@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowLeft, LockKeyhole, LogIn, Mail, MapPin, UserRound } from 'lucide-react';
+import { ArrowLeft, LockKeyhole, LogIn, Mail, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { ARLoader } from '@/components/ar-loader';
 import { supabase } from '@/lib/supabase';
@@ -15,11 +15,15 @@ export default function LoginPage() {
   const [checkingSession, setCheckingSession] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [notice, setNotice] = useState('');
+  const destination = () => {
+    const requested = new URLSearchParams(window.location.search).get('next');
+    return ['home', 'explore', 'quest', 'profile', 'navigation'].includes(requested ?? '') ? requested : 'home';
+  };
 
   useEffect(() => {
     let active = true;
     void supabase.auth.getSession().then(({ data }) => {
-      if (active && data.session) window.location.replace('/?view=profile');
+      if (active && data.session) window.location.replace(`/?view=${destination()}`);
     }).finally(() => { if (active) setCheckingSession(false); });
     return () => { active = false; };
   }, []);
@@ -40,12 +44,12 @@ export default function LoginPage() {
         },
       });
       if (error) setErrorMessage(error.message);
-      else if (data.session) window.location.replace('/?view=profile');
+      else if (data.session) window.location.replace(`/?view=${destination()}`);
       else setNotice('Account created. Check your email to confirm it, then return here to log in.');
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setErrorMessage(error.message);
-      else window.location.replace('/?view=profile');
+      else window.location.replace(`/?view=${destination()}`);
     }
     setBusy(false);
   };
@@ -53,8 +57,8 @@ export default function LoginPage() {
   return <main className="login-page">
     <section className="login-visual" aria-label="Digos City landscape">
       <div className="login-visual-shade" />
-      <Link className="login-back" href="/" aria-label="Back to DigosAR"><ArrowLeft size={20} /></Link>
-      <div className="login-story"><span className="login-logo"><i><MapPin size={17} /></i>Digos<strong>AR</strong></span><small>YOUR CITY. YOUR STORY.</small><h1>Explore Digos<br /><em>beyond the map.</em></h1><p>Save places, complete local quests, and keep every discovery connected to your account.</p></div>
+      <Link className="login-back" href="/?view=explore" aria-label="Back to Explore"><ArrowLeft size={20} /></Link>
+      <div className="login-story"><small>YOUR CITY. YOUR STORY.</small><h1>Explore Digos<br /><em>beyond the map.</em></h1><p>Save places, complete local quests, and keep every discovery connected to your account.</p></div>
     </section>
     <section className="login-panel">
       <div className="login-form-wrap">

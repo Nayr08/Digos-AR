@@ -1,5 +1,6 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { PWAInstallPrompt } from '@/components/pwa-install-prompt';
 import './globals.css';
 
 const geistSans = Geist({
@@ -15,6 +16,22 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'DigosAR — Explore Digos City',
   description: 'A mobile-first augmented reality tourism prototype for discovering Digos City.',
+  applicationName: 'DigosAR',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'DigosAR',
+  },
+  icons: {
+    icon: '/icon-192.png',
+    apple: '/icon-192.png',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#071A12',
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({
@@ -24,11 +41,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head><link rel="preload" as="image" href="/ar-loader/ar-loading-icon.gif" /></head>
+      <head><link rel="preload" as="image" href="/ar-loader/ar-loading-icon-optimized.gif" /></head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+        <PWAInstallPrompt />
       </body>
     </html>
   );
