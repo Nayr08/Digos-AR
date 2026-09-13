@@ -168,6 +168,7 @@ html,body{min-height:100%;background:#071a12}body{overflow-x:hidden}.site-shell{
   html,body{background:#071a12}
   .site-shell{min-height:100dvh;background:#071a12}
   .site-shell:before{display:none}
+  body:has(.login-page)::before{display:none}
 }
 @media(min-width:821px){.login-page,.login-visual,.login-panel{min-height:100dvh}}
 @media(min-width:821px){
