@@ -1,15 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowLeft, LockKeyhole, LogIn, Mail, UserRound } from 'lucide-react';
+import { ArrowLeft, AtSign, LockKeyhole, LogIn, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { ARLoader } from '@/components/ar-loader';
 import { supabase } from '@/lib/supabase';
+import { friendlyAuthError, isValidUsername, normalizeUsername, usernameToAuthEmail } from '@/lib/auth';
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [displayName, setDisplayName] = useState('');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
@@ -33,22 +34,28 @@ export default function LoginPage() {
     setBusy(true);
     setErrorMessage('');
     setNotice('');
+    const normalizedUsername = normalizeUsername(username);
+    if (!isValidUsername(normalizedUsername)) {
+      setErrorMessage('Username must be 3–20 characters and contain only letters, numbers, or underscores.');
+      setBusy(false);
+      return;
+    }
+    const authEmail = usernameToAuthEmail(normalizedUsername);
 
     if (mode === 'signup') {
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: authEmail,
         password,
         options: {
-          data: { display_name: displayName.trim() || 'Digos Explorer' },
-          emailRedirectTo: `${window.location.origin}/login`,
+          data: { display_name: displayName.trim() || 'Digos Explorer', username: normalizedUsername },
         },
       });
-      if (error) setErrorMessage(error.message);
+      if (error || data.user?.identities?.length === 0) setErrorMessage(error ? friendlyAuthError(error.message, 'signup') : 'That username is already taken.');
       else if (data.session) window.location.replace(`/?view=${destination()}`);
-      else setNotice('Account created. Check your email to confirm it, then return here to log in.');
+      else setNotice('Account created, but automatic sign-in is unavailable. Ask the administrator to disable email confirmation for this test setup.');
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setErrorMessage(error.message);
+      const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password });
+      if (error) setErrorMessage(friendlyAuthError(error.message, 'login'));
       else window.location.replace(`/?view=${destination()}`);
     }
     setBusy(false);
@@ -67,7 +74,7 @@ export default function LoginPage() {
         <p>{mode === 'login' ? 'Log in to continue your quests and saved places.' : 'Create an account to save progress across Digos.'}</p>
         <form className="login-form" onSubmit={submit}>
           {mode === 'signup' && <label><span>Display name</span><div><UserRound size={19} /><input required value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="Digos Explorer" /></div></label>}
-          <label><span>Email address</span><div><Mail size={19} /><input required type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" /></div></label>
+          <label><span>Username</span><div><AtSign size={19} /><input required minLength={3} maxLength={20} pattern="[A-Za-z0-9_]{3,20}" autoCapitalize="none" spellCheck={false} autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="your_username" /></div></label>
           <label><span>Password</span><div><LockKeyhole size={19} /><input required minLength={6} type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 6 characters" /></div></label>
           {errorMessage && <p className="auth-error">{errorMessage}</p>}
           {notice && <p className="auth-notice">{notice}</p>}

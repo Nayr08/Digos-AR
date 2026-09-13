@@ -2,8 +2,7 @@ const CACHE_NAME = 'digosar-shell-v1';
 const APP_SHELL = [
   '/',
   '/manifest.webmanifest',
-  '/icon-192.png',
-  '/icon-512.png',
+  '/digosar-icon.webp',
   '/favicon.svg',
 ];
 

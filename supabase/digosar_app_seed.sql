@@ -3,6 +3,10 @@
 
 begin;
 
+-- Account profiles are created by public.handle_new_user() after Supabase Auth
+-- signup. Do not seed passwords or synthetic auth emails here. Suggested manual
+-- test usernames: digosar, explorer01, testuser.
+
 insert into public.categories (slug, name, icon, sort_order) values
   ('heritage', 'Heritage', 'landmark', 1),
   ('history', 'History', 'history', 2),
@@ -33,28 +37,28 @@ insert into public.tourist_spots (
    'Dawis Heritage Wharf offers an open coastal setting for sunrise walks, sea views, and relaxed community visits.',
    'The Dawis waterfront reflects the city''s long relationship with coastal travel, fishing, and community trade.',
    'Sunrise walks, family gatherings, and views across the gulf make the wharf a shared civic space.',
-   'Sunrise', 6.80, 100, 4.8, '/dawis-coast.png', false, true, true),
+   'Sunrise', 6.80, 100, 4.8, '/touristspot/dawis-coast.webp', false, true, true),
   ((select id from public.categories where slug = 'history'),
    'rizal-park', 'Rizal Park', 'Digos City',
    'A central public park for civic events, quiet breaks, and community gatherings.',
    'Rizal Park is an accessible green space in the city center where residents meet, rest, and take part in public activities.',
    'Named for national hero José Rizal, the park is part of the city center''s civic landscape.',
    'The park serves as a meeting place and venue for public celebrations in Digos.',
-   'Late afternoon', 0.50, 100, 4.7, '/digos-mother-tree.png', false, true, true),
+   'Late afternoon', 0.50, 100, 4.7, '/touristspot/digos-rizalpark.webp', false, true, true),
   ((select id from public.categories where slug = 'nature'),
    'digos-city-eco-park-arboretum', 'Digos City Eco Park and Arboretum', 'Digos City',
    'A green learning space dedicated to trees, biodiversity, and environmental stewardship.',
    'The eco park and arboretum combines nature appreciation, recreation, and environmental learning in one city destination.',
    'The city developed the eco park and arboretum as a place for conservation, recreation, and environmental activities.',
    'Tree planting and nature education connect visitors with Digos City''s environmental programs.',
-   'Early morning', 4.80, 100, 4.9, '/digos-highlands.png', false, true, true),
+   'Early morning', 4.80, 100, 4.9, '/touristspot/digos-ecopark.webp', false, true, true),
   ((select id from public.categories where slug = 'culture'),
    'mary-mother-mediatrix-cathedral', 'Mary, Mother and Mediatrix of Grace Cathedral', 'Rizal Avenue, Digos City',
    'The cathedral church of the Diocese of Digos and a living center of local Catholic faith.',
    'The cathedral welcomes worshippers and visitors to a major spiritual and architectural landmark in the city center.',
    'The cathedral is closely tied to the growth of the Diocese of Digos and its Marian devotion.',
    'Worship, feast-day observances, and diocesan gatherings make the cathedral a major spiritual landmark.',
-   'Morning', 0.80, 100, 4.9, '/digos-mother-tree.png', false, true, true)
+   'Morning', 0.80, 100, 4.9, '/touristspot/digos-mother-tree.webp', false, true, true)
 on conflict (slug) do update set
   category_id = excluded.category_id,
   name = excluded.name,

@@ -127,14 +127,52 @@ create unique index if not exists one_correct_option_per_question
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
-  email text,
+  email text, -- Legacy migration field; DigosAR no longer writes or displays it.
   display_name text not null default 'Digos Explorer',
+  username text,
   avatar_url text,
   total_xp integer not null default 0 check (total_xp >= 0),
   level integer not null default 1 check (level > 0),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Safely migrate existing profiles before enforcing username requirements.
+alter table public.profiles add column if not exists username text;
+
+update public.profiles p
+set username = case
+  when lower(trim(coalesce(u.raw_user_meta_data ->> 'username', ''))) ~ '^[a-z0-9_]{3,20}$'
+    then lower(trim(u.raw_user_meta_data ->> 'username'))
+  else 'explorer_' || left(replace(p.id::text, '-', ''), 11)
+end
+from auth.users u
+where p.id = u.id
+  and (
+    p.username is null
+    or p.username <> lower(trim(p.username))
+    or p.username !~ '^[a-z0-9_]{3,20}$'
+  );
+
+update public.profiles
+set username = 'explorer_' || left(replace(id::text, '-', ''), 11)
+where username is null or username !~ '^[a-z0-9_]{3,20}$';
+
+-- Resolve any legacy case-insensitive duplicates before creating the unique index.
+with ranked_usernames as (
+  select id, row_number() over (partition by username order by created_at, id) as duplicate_number
+  from public.profiles
+)
+update public.profiles p
+set username = 'explorer_' || left(replace(p.id::text, '-', ''), 11)
+from ranked_usernames ranked
+where p.id = ranked.id and ranked.duplicate_number > 1;
+
+create unique index if not exists profiles_username_key on public.profiles(username);
+alter table public.profiles alter column username set not null;
+alter table public.profiles drop constraint if exists profiles_username_format;
+alter table public.profiles add constraint profiles_username_format
+  check (username = lower(trim(username)) and username ~ '^[a-z0-9_]{3,20}$');
 
 create table if not exists public.badges (
   id uuid primary key default gen_random_uuid(),
@@ -263,10 +301,10 @@ language plpgsql
 security definer set search_path = public
 as $$
 begin
-  insert into public.profiles (id, email, display_name, avatar_url)
+  insert into public.profiles (id, username, display_name, avatar_url)
   values (
     new.id,
-    new.email,
+    lower(trim(new.raw_user_meta_data ->> 'username')),
     coalesce(new.raw_user_meta_data ->> 'display_name', new.raw_user_meta_data ->> 'full_name', 'Digos Explorer'),
     new.raw_user_meta_data ->> 'avatar_url'
   )
@@ -416,25 +454,25 @@ insert into public.tourist_spots (
    'Kapatagan is a highland barangay in Digos City known for its cool climate, breathtaking views, and peaceful atmosphere.',
    'Kapatagan grew from a farming community into one of the city''s best-known gateways to the Mount Apo landscape.',
    'Local farms, mountain hospitality, and seasonal produce shape the rhythm of everyday life here.',
-   'October – May', 26.00, 100, 4.9, '/digos-highlands.png', true, true, true),
+   'October – May', 26.00, 100, 4.9, '/touristspot/digos-highlands.webp', true, true, true),
   ((select id from public.categories where slug = 'nature'), 'digos-mother-tree', 'Digos Mother Tree', 'Digos City',
    'A monumental living tree whose vast canopy has become a treasured natural landmark.',
    'The Digos Mother Tree is one of the city''s most recognizable natural landmarks and a place for reflection beneath its expansive canopy.',
    'Generations of residents have gathered beneath its shade, making the tree part of the city''s shared memory.',
    'The landmark represents stewardship, longevity, and the close relationship between Digos and nature.',
-   'Year-round', 4.20, 100, 4.8, '/digos-mother-tree.png', true, true, true),
+   'Year-round', 4.20, 100, 4.8, '/touristspot/digos-mother-tree.webp', true, true, true),
   ((select id from public.categories where slug = 'adventure'), 'mt-apo-view-trail', 'Mt. Apo View Trail', 'Kapatagan',
    'A scenic highland trail with dramatic views toward the country''s highest mountain.',
    'This highland trail offers cool air, mountain scenery, and viewpoints toward the Mount Apo landscape.',
    'The surrounding highlands have long connected communities, farms, and routes toward Mount Apo.',
    'Visitors are encouraged to respect local guides, protected landscapes, and Indigenous traditions.',
-   'November – April', 29.00, 100, 4.9, '/digos-highlands.png', true, true, true),
+   'November – April', 29.00, 100, 4.9, '/touristspot/digos-highlands.webp', true, true, true),
   ((select id from public.categories where slug = 'nature'), 'dawis-beach', 'Dawis Beach', 'Digos City',
    'A laid-back tropical shoreline for sunset walks, sea air, and quiet coastal views.',
    'Dawis Beach offers a simple coastal escape within easy reach of the city.',
    'Dawis reflects the city''s enduring connection to the Davao Gulf and coastal livelihoods.',
    'Simple seaside gatherings and community life give the area its relaxed local character.',
-   'December – May', 7.80, 100, 4.6, '/dawis-coast.png', true, true, true)
+   'December – May', 7.80, 100, 4.6, '/touristspot/dawis-coast.webp', true, true, true)
 on conflict (slug) do update set
   category_id = excluded.category_id,
   name = excluded.name,

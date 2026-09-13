@@ -41,6 +41,12 @@ export type SpotQuest = {
   questions: QuizQuestion[];
 };
 
+export type RecentAdventure = {
+  spotId: string;
+  status: 'visited' | 'completed' | 'ar-scan';
+  occurredAt: string;
+};
+
 export const fallbackDestinations: Destination[] = [
   {
     slug: 'dawis-heritage-wharf',
@@ -50,7 +56,7 @@ export const fallbackDestinations: Destination[] = [
     type: 'Heritage',
     best: 'Sunrise',
     distance: '6.8 km',
-    image: '/dawis-coast.png',
+    image: '/touristspot/dawis-coast.webp',
     position: 'center',
     description: 'A waterfront promenade where Digos wakes to views of the Davao Gulf.',
     history: 'The Dawis waterfront reflects the city’s long relationship with coastal travel, fishing, and community trade.',
@@ -65,7 +71,7 @@ export const fallbackDestinations: Destination[] = [
     type: 'History',
     best: 'Late afternoon',
     distance: '0.5 km',
-    image: '/digos-mother-tree.png',
+    image: '/touristspot/digos-rizalpark.webp',
     position: 'center',
     description: 'A central public park for civic events, quiet breaks, and community gatherings.',
     history: 'Named for national hero José Rizal, the park is part of the city center’s civic landscape.',
@@ -80,7 +86,7 @@ export const fallbackDestinations: Destination[] = [
     type: 'Nature',
     best: 'Early morning',
     distance: '4.8 km',
-    image: '/digos-highlands.png',
+    image: '/touristspot/digos-ecopark.webp',
     position: 'center',
     description: 'A green learning space dedicated to trees, biodiversity, and environmental stewardship.',
     history: 'The city developed the eco park and arboretum as a place for conservation, recreation, and environmental activities.',
@@ -95,7 +101,7 @@ export const fallbackDestinations: Destination[] = [
     type: 'Culture',
     best: 'Morning',
     distance: '0.8 km',
-    image: '/digos-mother-tree.png',
+    image: '/touristspot/digos-mother-tree.webp',
     position: 'center',
     description: 'The cathedral church of the Diocese of Digos and a living center of local Catholic faith.',
     history: 'The cathedral is closely tied to the growth of the Diocese of Digos and its Marian devotion.',
@@ -150,7 +156,10 @@ export async function loadTouristSpots(): Promise<Destination[]> {
       best: row.best_time_to_visit ?? fallback.best,
       distance,
       rating: Number(row.rating).toFixed(1),
-      image: row.hero_image_url || fallback.image,
+      // These four app-owned images live in public/touristspot. Keep the local
+      // WebP mapping authoritative so legacy .png URLs in existing Supabase
+      // rows cannot override them and render a broken card/background.
+      image: fallback.image,
       history: row.history ?? fallback.history,
       culture: row.cultural_significance ?? fallback.culture,
       xpReward: row.xp_reward,
@@ -213,4 +222,55 @@ export async function loadQuestForSpot(spotId?: string): Promise<SpotQuest | nul
           })),
       })),
   };
+}
+
+export async function loadRecentAdventures(userId: string): Promise<RecentAdventure[]> {
+  const [progressResult, scansResult, attemptsResult] = await Promise.all([
+    supabase.from('user_spot_progress').select('tourist_spot_id, status, last_visited_at, completed_at, updated_at').eq('user_id', userId).in('status', ['visited', 'completed']),
+    supabase.from('ar_scan_history').select('tourist_spot_id, scanned_at').eq('user_id', userId).eq('recognized', true).not('tourist_spot_id', 'is', null),
+    supabase.from('quiz_attempts').select('completed_at, quests(tourist_spot_id)').eq('user_id', userId).not('completed_at', 'is', null),
+  ]);
+
+  if (progressResult.error || scansResult.error || attemptsResult.error) throw new Error('Unable to load recent adventures.');
+
+  const activities: RecentAdventure[] = [];
+  for (const row of progressResult.data ?? []) {
+    const occurredAt = row.completed_at || row.last_visited_at || row.updated_at;
+    if (row.tourist_spot_id && occurredAt) activities.push({ spotId: row.tourist_spot_id, status: row.status === 'completed' ? 'completed' : 'visited', occurredAt });
+  }
+  for (const row of scansResult.data ?? []) {
+    if (row.tourist_spot_id && row.scanned_at) activities.push({ spotId: row.tourist_spot_id, status: 'ar-scan', occurredAt: row.scanned_at });
+  }
+  for (const row of attemptsResult.data ?? []) {
+    const quest = Array.isArray(row.quests) ? row.quests[0] : row.quests;
+    if (quest?.tourist_spot_id && row.completed_at) activities.push({ spotId: quest.tourist_spot_id, status: 'completed', occurredAt: row.completed_at });
+  }
+
+  return activities.sort((a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt)).slice(0, 2);
+}
+
+/** Count distinct Heritage spots reached by this authenticated user since Monday. */
+export async function loadWeeklyHeritageProgress(userId: string): Promise<number> {
+  const now = new Date();
+  const day = now.getDay();
+  const daysSinceMonday = (day + 6) % 7;
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - daysSinceMonday);
+  weekStart.setHours(0, 0, 0, 0);
+  const weekStartISO = weekStart.toISOString();
+  const { data: category, error: categoryError } = await supabase.from('categories').select('id').eq('slug', 'heritage').single();
+  if (categoryError || !category) throw new Error('Unable to load challenge category.');
+  const { data: heritageSpots, error: spotsError } = await supabase.from('tourist_spots').select('id').eq('category_id', category.id);
+  if (spotsError) throw spotsError;
+  const heritageIds = (heritageSpots ?? []).map((spot) => spot.id).filter(Boolean);
+  if (!heritageIds.length) return 0;
+  const [progressResult, scansResult] = await Promise.all([
+    supabase.from('user_spot_progress').select('tourist_spot_id').eq('user_id', userId).in('tourist_spot_id', heritageIds).in('status', ['visited', 'completed']).gte('last_visited_at', weekStartISO),
+    supabase.from('ar_scan_history').select('tourist_spot_id').eq('user_id', userId).eq('recognized', true).in('tourist_spot_id', heritageIds).gte('scanned_at', weekStartISO),
+  ]);
+  if (progressResult.error || scansResult.error) throw new Error('Unable to load challenge progress.');
+  return new Set([
+    ...(progressResult.data ?? []).map((row) => row.tourist_spot_id),
+    ...(scansResult.data ?? []).map((row) => row.tourist_spot_id),
+  ]).size;
 }

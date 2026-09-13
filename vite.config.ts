@@ -3,10 +3,12 @@ import vinext from 'vinext';
 import { nitro } from 'nitro/vite';
 import { defineConfig } from 'vite';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [
     tailwindcss(),
     vinext(),
-    nitro(),
+    // Nitro's fetchable environments do not expose the RSC dev runner expected
+    // by Vinext. It is only required when producing the deployable build.
+    ...(command === 'build' ? [nitro()] : []),
   ],
-});
+}));
