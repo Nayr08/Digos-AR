@@ -335,11 +335,26 @@ export default function DigosAR() {
   const [accountLoading, setAccountLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [authToast, setAuthToast] = useState('');
+  const [bootStage, setBootStage] = useState('app shell');
+  const [bootTimedOut, setBootTimedOut] = useState(false);
   const authRedirectTimerRef = useRef<number | null>(null);
   const [isNavVisible, setIsNavVisible] = useState(true);
   const navInteractingRef = useRef(false);
   const [recentTrail, setRecentTrail] = useState<RecentTrail | null>(null);
   const [unlockedQuestSlugs, setUnlockedQuestSlugs] = useState<string[]>([]);
+  const markBoot = useCallback((stage: string) => {
+    if (!import.meta.env.DEV) return;
+    console.info(`[DigosAR Boot] ${stage}`);
+    setBootStage(stage);
+  }, []);
+  useEffect(() => {
+    markBoot('root mounted');
+    const timeout = window.setTimeout(() => {
+      console.error('[DigosAR Boot ERROR] Startup exceeded 8 seconds.');
+      setBootTimedOut(true);
+    }, 8000);
+    return () => window.clearTimeout(timeout);
+  }, [markBoot]);
   const refreshProfile = useCallback(async () => {
     if (!user) { setProfile(null); setProfileLoading(false); return; }
     setProfileLoading(true);
@@ -503,16 +518,18 @@ export default function DigosAR() {
 
   useEffect(() => {
     let active = true;
+    markBoot('tourist spots fetch started');
     loadTouristSpots().then((loaded) => {
       if (!active) return;
       setSpots(loaded);
       setSpot((current) => loaded.find((item) => item.slug === current.slug) ?? loaded[0]);
-    }).catch(() => undefined).finally(() => { if (active) setSpotsLoading(false); });
+    }).catch((error) => { console.error('[DigosAR Boot ERROR] Tourist spots fetch failed', error); }).finally(() => { if (active) { setSpotsLoading(false); markBoot('tourist spots fetch finished'); } });
     return () => { active = false; };
-  }, []);
+  }, [markBoot]);
 
   useEffect(() => {
     let active = true;
+    markBoot('getSession started');
     void supabase.auth.getSession().then(({ data }) => {
       if (!active) return;
       const currentUser = data.session?.user ?? null;
@@ -526,13 +543,13 @@ export default function DigosAR() {
       } else {
         window.location.replace(`/login?next=${requested ?? 'home'}`);
       }
-    }).finally(() => { if (active) setAuthLoading(false); });
+    }).catch((error) => { console.error('[DigosAR Boot ERROR] getSession failed', error); }).finally(() => { if (active) { setAuthLoading(false); markBoot('getSession finished'); } });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       if (!session?.user) { setProfile(null); setProfileLoading(false); }
     });
     return () => { active = false; listener.subscription.unsubscribe(); };
-  }, []);
+  }, [markBoot]);
 
   useEffect(() => {
     // Account state is synchronized from Supabase, the external source of truth.
@@ -541,12 +558,13 @@ export default function DigosAR() {
     let active = true;
     // oxlint-disable-next-line react/react-compiler
     setAccountLoading(true);
+    markBoot('profile fetch started');
     void Promise.all([refreshProfile(), supabase.from('user_dashboard_stats').select('spots_visited, quizzes_completed, badges_earned').eq('user_id', user.id).maybeSingle()]).then(([, statsResult]) => {
       if (!active) return;
       if (statsResult.data) setStats(statsResult.data as DashboardStats);
-    }).finally(() => { if (active) setAccountLoading(false); });
+    }).catch((error) => { console.error('[DigosAR Boot ERROR] Account fetch failed', error); }).finally(() => { if (active) { setAccountLoading(false); markBoot('profile fetch finished'); } });
     return () => { active = false; };
-  }, [user, refreshProfile]);
+  }, [user, refreshProfile, markBoot]);
 
   const signOut = async () => {
     setActionLoading(true);
@@ -584,8 +602,8 @@ export default function DigosAR() {
   else if (!user) content = <HomeScreen go={go} open={open} openAR={openAR} spots={spots} recentTrail={recentTrail} displayName="Explorer" challengeProgress={0} />;
   else if (!profile) content = <div className="screen profile-screen" />;
   else content = <ProfileScreen user={user} profile={profile} stats={stats} recentAdventures={recentAdventures} recentAdventuresLoading={recentAdventuresLoading} spots={spots} onSignOut={() => void signOut()} refreshProfile={refreshProfile} signingOut={actionLoading} />;
-  const isGloballyLoading = spotsLoading || authLoading || profileLoading || transitionLoading || accountLoading || actionLoading;
+  const isGloballyLoading = !bootTimedOut && (spotsLoading || authLoading || profileLoading || transitionLoading || accountLoading || actionLoading);
   const loadingLabel = transitionLoading ? 'Opening…' : accountLoading ? 'Loading your account…' : actionLoading ? 'Please wait…' : 'Preparing your DigosAR experience…';
   const usesDarkShell = ['home', 'explore', 'quest', 'quiz', 'achievements', 'profile'].includes(screen);
-  return <main className="site-shell"><div className="desktop-brand"><Logo inverse /><h1>A new layer<br />of Digos.</h1><p>Immersive tourism. Local stories.<br />One AR-ready companion.</p><span>WEB APP EXPERIENCE</span></div><div className={`phone ${screen === 'home' ? 'home-phone' : ''} ${screen === 'ar' ? 'ar-phone' : ''} ${usesDarkShell ? 'dark-phone' : ''} ${isGloballyLoading ? 'is-loading' : ''}`}>{screen !== 'ar' && <div className={`status-bar ${['home','navigation'].includes(screen) ? 'light' : ''}`}><span>9:41</span><div><i /><i /><b /></div></div>}<div className="app-content">{content}</div>{screen !== 'ar' && <BottomNav active={active} go={go} visible={isNavVisible} onInteractionChange={(interacting) => { navInteractingRef.current = interacting; if (interacting) setIsNavVisible(true); }} />}{authToast && <output className="auth-required-toast">{authToast}</output>}{isGloballyLoading && <div className="global-loading"><ARLoader label={loadingLabel} /></div>}</div><div className="desktop-index"><span>01</span><i /><span>FOREST GLASS</span></div></main>;
+  return <main className="site-shell"><div className="desktop-brand"><Logo inverse /><h1>A new layer<br />of Digos.</h1><p>Immersive tourism. Local stories.<br />One AR-ready companion.</p><span>WEB APP EXPERIENCE</span></div><div className={`phone ${screen === 'home' ? 'home-phone' : ''} ${screen === 'ar' ? 'ar-phone' : ''} ${usesDarkShell ? 'dark-phone' : ''} ${isGloballyLoading ? 'is-loading' : ''}`}>{screen !== 'ar' && <div className={`status-bar ${['home','navigation'].includes(screen) ? 'light' : ''}`}><span>9:41</span><div><i /><i /><b /></div></div>}<div className="app-content">{content}</div>{screen !== 'ar' && <BottomNav active={active} go={go} visible={isNavVisible} onInteractionChange={(interacting) => { navInteractingRef.current = interacting; if (interacting) setIsNavVisible(true); }} />}{authToast && <output className="auth-required-toast">{authToast}</output>}{isGloballyLoading && <div className="global-loading"><ARLoader label={loadingLabel} /></div>}{import.meta.env.DEV && <output className="boot-debug-overlay">BOOT: {bootStage}{bootTimedOut ? ' · timeout' : ''}</output>}{bootTimedOut && <div className="boot-timeout"><strong>DigosAR is taking longer than expected to load.</strong><button type="button" onClick={() => window.location.reload()}>Retry</button></div>}</div><div className="desktop-index"><span>01</span><i /><span>FOREST GLASS</span></div></main>;
 }

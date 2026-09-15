@@ -366,6 +366,10 @@ html,body{min-height:100%;background:#071a12}body{overflow-x:hidden}.site-shell{
 @keyframes auth-toast-in{from{opacity:0;transform:translate(-50%,7px) scale(.97)}to{opacity:1;transform:translateX(-50%) scale(1)}}
 @keyframes profile-loading-shimmer{to{background-position:-220% 0}}
 @media(prefers-reduced-motion:reduce){.auth-required-toast,.profile-recent-loading i{animation:none}}
+.ar-camera-mode .ar-mindar-canvas{position:absolute;z-index:0;inset:0;width:100%;height:100%;display:block;object-fit:cover}
+.ar-camera-mode.target-detected .ar-scanner-frame{filter:drop-shadow(0 0 10px rgba(155,255,87,.55))}
+.ar-scanner-copy strong{display:flex;align-items:center;justify-content:center;gap:5px}
+.ar-detection-indicator{position:absolute;z-index:5;left:50%;bottom:calc(98px + env(safe-area-inset-bottom));transform:translateX(-50%);padding:8px 12px;border:1px solid rgba(155,255,87,.28);border-radius:999px;color:#071a12;background:#9bff57;box-shadow:0 8px 22px rgba(0,0,0,.24);font-size:11px;font-weight:850;white-space:nowrap}
 
 /* Keep the carousel shadow from reading as a black strip above the challenge. */
 .home-screen .popular-card{box-shadow:0 7px 16px rgba(0,0,0,.16)}
@@ -374,4 +378,6 @@ html,body{min-height:100%;background:#071a12}body{overflow-x:hidden}.site-shell{
 .signout-confirm-dialog{place-self:center}
 .home-notification-wrap{position:relative;justify-self:end}
 .home-notification-note{width:150px;position:absolute;z-index:8;top:46px;right:0;padding:9px 11px;border:1px solid rgba(155,255,87,.16);border-radius:11px;color:var(--text-primary);background:rgba(16,39,27,.96);box-shadow:0 8px 20px rgba(0,0,0,.25);font-size:10px;text-align:center;white-space:nowrap}
+.error-screen{min-height:100dvh;display:grid;place-items:center;padding:24px;color:#f5f7f3;background:#071a12;text-align:center}.error-screen section{max-width:300px}.error-screen small{color:#9bff57;font-weight:850;letter-spacing:.14em}.error-screen h1{margin:10px 0 8px;font-family:Georgia,serif;font-size:28px}.error-screen p{color:#aab7ad;font-size:13px}.error-screen button{height:44px;padding:0 18px;border:0;border-radius:13px;color:#071a12;background:#9bff57;font-weight:850}
+.boot-debug-overlay{position:fixed;left:10px;bottom:10px;z-index:10000;padding:5px 8px;border:1px solid rgba(155,255,87,.28);border-radius:7px;color:#9bff57;background:rgba(7,26,18,.9);font:10px/1.2 ui-monospace,monospace;pointer-events:none}.boot-timeout{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:24px;background:rgba(7,26,18,.96);color:#f5f7f3;text-align:center}.boot-timeout strong{display:block;max-width:250px;margin-bottom:14px}.boot-timeout button{height:40px;padding:0 18px;border:0;border-radius:12px;color:#071a12;background:#9bff57;font-weight:800}
 
