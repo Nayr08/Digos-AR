@@ -4,6 +4,44 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Camera, Check, Flashlight } from 'lucide-react';
 import * as THREE from 'three';
 
+type BoardSpec = { title: string; body: string; accent: string; width: number; height: number };
+const boardSpecs: BoardSpec[] = [
+  { title: 'Dawis Heritage Wharf', body: 'Heritage Site • Digos City', accent: '#d9a441', width: 1.65, height: 0.88 },
+  { title: 'History', body: 'A beloved waterfront landmark where generations of Digosnon stories meet the sea.', accent: '#6fa37a', width: 1.25, height: 0.72 },
+  { title: 'About', body: 'A scenic wharf and promenade known for quiet views, local life, and heritage memories.', accent: '#c89055', width: 1.25, height: 0.72 },
+  { title: 'Fun Fact', body: 'Dawis faces the Digos Gulf and remains a favorite stop for sunset walks.', accent: '#9bff57', width: 1.25, height: 0.72 },
+];
+
+function roundedRect(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
+  context.beginPath(); context.roundRect(x, y, width, height, radius); context.fill();
+}
+
+function createBoard(spec: BoardSpec) {
+  const canvas = document.createElement('canvas'); canvas.width = 768; canvas.height = 420;
+  const context = canvas.getContext('2d'); if (!context) return new THREE.Group();
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = 'rgba(0,0,0,.28)'; roundedRect(context, 22, 28, 724, 370, 34);
+  context.fillStyle = '#5b3e2c'; roundedRect(context, 10, 10, 724, 370, 30);
+  context.fillStyle = '#f3e4c2'; roundedRect(context, 28, 28, 688, 334, 22);
+  context.fillStyle = spec.accent; roundedRect(context, 28, 28, 688, 58, 22);
+  context.fillRect(28, 58, 688, 28);
+  context.fillStyle = '#143324'; context.font = '700 34px Arial'; context.fillText(spec.title, 58, 145);
+  context.fillStyle = '#395246'; context.font = '400 23px Arial';
+  const words = spec.body.split(' '); let line = ''; let y = 195;
+  for (const word of words) { const next = line ? `${line} ${word}` : word; if (context.measureText(next).width > 590) { context.fillText(line, 58, y); line = word; y += 34; } else line = next; }
+  if (line) context.fillText(line, 58, y);
+  context.fillStyle = '#8c6a42'; context.font = '600 17px Arial'; context.fillText('DIGOSAR · DISCOVER BEYOND THE MAP', 58, 335);
+  const texture = new THREE.CanvasTexture(canvas); texture.encoding = THREE.sRGBEncoding;
+  const group = new THREE.Group();
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(spec.width, spec.height), new THREE.MeshBasicMaterial({ map: texture, transparent: true }));
+  group.add(mesh); group.userData.texture = texture;
+  return group;
+}
+
+function disposeBoard(object: THREE.Object3D) {
+  object.traverse((child) => { const mesh = child as THREE.Mesh; mesh.geometry?.dispose(); const material = mesh.material; if (Array.isArray(material)) material.forEach((item) => { item.map?.dispose(); item.dispose(); }); else if (material) { material.map?.dispose(); material.dispose(); } });
+}
+
 type CameraState = 'requesting' | 'active' | 'denied' | 'unavailable' | 'tracking-error' | 'secure-context-error';
 type MindARInstance = {
   start: () => Promise<void>;
@@ -19,7 +57,7 @@ export function ARCameraScreen({ onBack }: { onBack: () => void }) {
   const mindarRef = useRef<MindARInstance | null>(null);
   const mountedRef = useRef(false);
   const attemptRef = useRef(0);
-  const cubeRef = useRef<THREE.Mesh | null>(null);
+  const boardsRef = useRef<THREE.Group[]>([]);
   const [cameraState, setCameraState] = useState<CameraState>('requesting');
   const [isDawisDetected, setIsDawisDetected] = useState(false);
 
@@ -29,13 +67,7 @@ export function ARCameraScreen({ onBack }: { onBack: () => void }) {
     mindar.renderer.setAnimationLoop(null);
     mindar.stop();
     mindar.renderer.dispose?.();
-    if (cubeRef.current) {
-      cubeRef.current.geometry.dispose();
-      const material = cubeRef.current.material;
-      if (Array.isArray(material)) material.forEach((item) => item.dispose());
-      else material.dispose();
-      cubeRef.current = null;
-    }
+    boardsRef.current.forEach(disposeBoard); boardsRef.current = [];
     mindarRef.current = null;
   }, []);
 
@@ -55,17 +87,8 @@ export function ARCameraScreen({ onBack }: { onBack: () => void }) {
       const mindar = new MindARThree({ container: containerRef.current, imageTargetSrc: '/ar/targets/dawis.mind', uiLoading: 'no', uiScanning: 'no', uiError: 'no' }) as MindARInstance;
       mindarRef.current = mindar;
       const anchor = mindar.addAnchor(0);
-      const cube = new THREE.Mesh(
-        new THREE.BoxGeometry(0.42, 0.42, 0.42),
-        new THREE.MeshStandardMaterial({ color: 0x9bff57, roughness: 0.48, metalness: 0.08 }),
-      );
-      cube.position.set(0, 0, 0.1);
-      anchor.group.add(cube);
-      anchor.group.add(new THREE.AmbientLight(0xffffff, 1.8));
-      const keyLight = new THREE.DirectionalLight(0xffffff, 1.4);
-      keyLight.position.set(1, 2, 2);
-      anchor.group.add(keyLight);
-      cubeRef.current = cube;
+      const boards = boardSpecs.map((spec, index) => { const board = createBoard(spec); const positions = [[0, 0.64, 0.08], [-0.9, 0.02, 0.02], [0.9, 0.02, 0.02], [0.18, 1.2, -0.1]][index]; board.position.set(positions[0], positions[1], positions[2]); board.userData.baseY = positions[1]; board.userData.phase = index * 0.8; anchor.group.add(board); return board; });
+      boardsRef.current = boards;
       anchor.onTargetFound = () => { if (mountedRef.current) setIsDawisDetected(true); };
       anchor.onTargetLost = () => { if (mountedRef.current) setIsDawisDetected(false); };
       await mindar.start();
@@ -76,7 +99,7 @@ export function ARCameraScreen({ onBack }: { onBack: () => void }) {
       if (canvas) canvas.className = 'ar-mindar-canvas';
       const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       mindar.renderer.setAnimationLoop(() => {
-        if (!reducedMotion && cubeRef.current) cubeRef.current.rotation.y += 0.006;
+        boardsRef.current.forEach((board) => { if (!reducedMotion) { board.position.y = board.userData.baseY + Math.sin(performance.now() * 0.0015 + board.userData.phase) * 0.012; board.rotation.z = Math.sin(performance.now() * 0.001 + board.userData.phase) * 0.008; } });
         mindar.renderer.render(mindar.scene, mindar.camera);
       });
       setCameraState('active');

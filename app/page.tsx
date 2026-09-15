@@ -337,6 +337,7 @@ export default function DigosAR() {
   const [authToast, setAuthToast] = useState('');
   const [bootStage, setBootStage] = useState('app shell');
   const [bootTimedOut, setBootTimedOut] = useState(false);
+  const bootTimeoutRef = useRef<number | null>(null);
   const authRedirectTimerRef = useRef<number | null>(null);
   const [isNavVisible, setIsNavVisible] = useState(true);
   const navInteractingRef = useRef(false);
@@ -349,12 +350,18 @@ export default function DigosAR() {
   }, []);
   useEffect(() => {
     markBoot('root mounted');
-    const timeout = window.setTimeout(() => {
+    bootTimeoutRef.current = window.setTimeout(() => {
       console.error('[DigosAR Boot ERROR] Startup exceeded 8 seconds.');
       setBootTimedOut(true);
     }, 8000);
-    return () => window.clearTimeout(timeout);
+    return () => { if (bootTimeoutRef.current !== null) window.clearTimeout(bootTimeoutRef.current); };
   }, [markBoot]);
+  useEffect(() => {
+    if (spotsLoading || authLoading || profileLoading || accountLoading) return;
+    if (bootTimeoutRef.current !== null) window.clearTimeout(bootTimeoutRef.current);
+    setBootTimedOut(false);
+    markBoot('UI rendered');
+  }, [spotsLoading, authLoading, profileLoading, accountLoading, markBoot]);
   const refreshProfile = useCallback(async () => {
     if (!user) { setProfile(null); setProfileLoading(false); return; }
     setProfileLoading(true);
@@ -602,7 +609,7 @@ export default function DigosAR() {
   else if (!user) content = <HomeScreen go={go} open={open} openAR={openAR} spots={spots} recentTrail={recentTrail} displayName="Explorer" challengeProgress={0} />;
   else if (!profile) content = <div className="screen profile-screen" />;
   else content = <ProfileScreen user={user} profile={profile} stats={stats} recentAdventures={recentAdventures} recentAdventuresLoading={recentAdventuresLoading} spots={spots} onSignOut={() => void signOut()} refreshProfile={refreshProfile} signingOut={actionLoading} />;
-  const isGloballyLoading = !bootTimedOut && (spotsLoading || authLoading || profileLoading || transitionLoading || accountLoading || actionLoading);
+  const isGloballyLoading = screen !== 'ar' && !bootTimedOut && (spotsLoading || authLoading || profileLoading || transitionLoading || accountLoading || actionLoading);
   const loadingLabel = transitionLoading ? 'Opening…' : accountLoading ? 'Loading your account…' : actionLoading ? 'Please wait…' : 'Preparing your DigosAR experience…';
   const usesDarkShell = ['home', 'explore', 'quest', 'quiz', 'achievements', 'profile'].includes(screen);
   return <main className="site-shell"><div className="desktop-brand"><Logo inverse /><h1>A new layer<br />of Digos.</h1><p>Immersive tourism. Local stories.<br />One AR-ready companion.</p><span>WEB APP EXPERIENCE</span></div><div className={`phone ${screen === 'home' ? 'home-phone' : ''} ${screen === 'ar' ? 'ar-phone' : ''} ${usesDarkShell ? 'dark-phone' : ''} ${isGloballyLoading ? 'is-loading' : ''}`}>{screen !== 'ar' && <div className={`status-bar ${['home','navigation'].includes(screen) ? 'light' : ''}`}><span>9:41</span><div><i /><i /><b /></div></div>}<div className="app-content">{content}</div>{screen !== 'ar' && <BottomNav active={active} go={go} visible={isNavVisible} onInteractionChange={(interacting) => { navInteractingRef.current = interacting; if (interacting) setIsNavVisible(true); }} />}{authToast && <output className="auth-required-toast">{authToast}</output>}{isGloballyLoading && <div className="global-loading"><ARLoader label={loadingLabel} /></div>}{import.meta.env.DEV && <output className="boot-debug-overlay">BOOT: {bootStage}{bootTimedOut ? ' · timeout' : ''}</output>}{bootTimedOut && <div className="boot-timeout"><strong>DigosAR is taking longer than expected to load.</strong><button type="button" onClick={() => window.location.reload()}>Retry</button></div>}</div><div className="desktop-index"><span>01</span><i /><span>FOREST GLASS</span></div></main>;
