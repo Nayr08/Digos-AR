@@ -46,7 +46,7 @@ type CameraState = 'requesting' | 'active' | 'denied' | 'unavailable' | 'trackin
 type MindARInstance = {
   start: () => Promise<void>;
   stop: () => void;
-  addAnchor: (targetIndex: number) => { group: { add: (object: unknown) => void }; onTargetFound?: () => void; onTargetLost?: () => void };
+  addAnchor: (targetIndex: number) => { group: { add: (object: unknown) => void; visible?: boolean }; onTargetFound?: () => void; onTargetLost?: () => void };
   renderer: { setAnimationLoop: (callback: (() => void) | null) => void; render: (scene: unknown, camera: unknown) => void; dispose?: () => void };
   scene: unknown;
   camera: unknown;
@@ -58,6 +58,7 @@ export function ARCameraScreen({ onBack }: { onBack: () => void }) {
   const mountedRef = useRef(false);
   const attemptRef = useRef(0);
   const boardsRef = useRef<THREE.Group[]>([]);
+  const boardLockedRef = useRef(false);
   const [cameraState, setCameraState] = useState<CameraState>('requesting');
   const [isDawisDetected, setIsDawisDetected] = useState(false);
 
@@ -68,6 +69,7 @@ export function ARCameraScreen({ onBack }: { onBack: () => void }) {
     mindar.stop();
     mindar.renderer.dispose?.();
     boardsRef.current.forEach(disposeBoard); boardsRef.current = [];
+    boardLockedRef.current = false;
     mindarRef.current = null;
   }, []);
 
@@ -89,8 +91,10 @@ export function ARCameraScreen({ onBack }: { onBack: () => void }) {
       const anchor = mindar.addAnchor(0);
       const boards = boardSpecs.map((spec, index) => { const board = createBoard(spec); const positions = [[0, 0.64, 0.08], [-0.9, 0.02, 0.02], [0.9, 0.02, 0.02], [0.18, 1.2, -0.1]][index]; board.position.set(positions[0], positions[1], positions[2]); board.userData.baseY = positions[1]; board.userData.phase = index * 0.8; anchor.group.add(board); return board; });
       boardsRef.current = boards;
-      anchor.onTargetFound = () => { if (mountedRef.current) setIsDawisDetected(true); };
-      anchor.onTargetLost = () => { if (mountedRef.current) setIsDawisDetected(false); };
+      anchor.onTargetFound = () => { boardLockedRef.current = true; anchor.group.visible = true; if (mountedRef.current) setIsDawisDetected(true); };
+      // Keep the information scene at its last tracked pose until the user exits
+      // or scans another target instead of making it vanish on a brief tracking dip.
+      anchor.onTargetLost = () => { anchor.group.visible = true; if (mountedRef.current) setIsDawisDetected(false); };
       await mindar.start();
       if (!mountedRef.current || attempt !== attemptRef.current) return;
       const video = containerRef.current.querySelector('video');
@@ -99,6 +103,7 @@ export function ARCameraScreen({ onBack }: { onBack: () => void }) {
       if (canvas) canvas.className = 'ar-mindar-canvas';
       const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       mindar.renderer.setAnimationLoop(() => {
+        if (boardLockedRef.current) anchor.group.visible = true;
         boardsRef.current.forEach((board) => { if (!reducedMotion) { board.position.y = board.userData.baseY + Math.sin(performance.now() * 0.0015 + board.userData.phase) * 0.012; board.rotation.z = Math.sin(performance.now() * 0.001 + board.userData.phase) * 0.008; } });
         mindar.renderer.render(mindar.scene, mindar.camera);
       });
