@@ -1,4 +1,4 @@
-import { Trophy } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 
 export type Challenge = {
   id: string;
@@ -16,19 +16,13 @@ export function ChallengeCard({ challenge, onContinue }: { challenge: Challenge;
   const safeProgress = Math.max(0, Math.min(challenge.progress, safeTarget));
 
   return <section className="home-challenge" aria-labelledby={`challenge-${challenge.id}`}>
-    <p className="home-challenge-label">Weekly Challenge</p>
     <article className="challenge-card">
       <header className="challenge-card-head">
-        <span className="challenge-icon"><Trophy size={18} /></span>
-        <div><small>{challenge.category}</small><strong>Weekly Challenge</strong></div>
-        <button type="button" onClick={onContinue}>Continue</button>
+        <div><small>Weekly Challenge</small><h2 id={`challenge-${challenge.id}`}>{challenge.title}</h2></div>
+        <button type="button" onClick={onContinue}>Continue <ChevronRight size={17} /></button>
       </header>
-      <div className="challenge-copy">
-        <h2 id={`challenge-${challenge.id}`}>{challenge.title}</h2>
-        <p>{challenge.description}</p>
-      </div>
       <div className="challenge-progress-copy">
-        <span><strong>{safeProgress} / {safeTarget}</strong> completed</span>
+        <span><strong>{safeProgress} / {safeTarget}</strong> visited</span>
         <strong>+{challenge.rewardXP} XP</strong>
       </div>
       <progress className="challenge-progress" aria-label={`${challenge.title} progress`} value={safeProgress} max={safeTarget} />

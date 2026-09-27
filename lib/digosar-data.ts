@@ -47,6 +47,22 @@ export type RecentAdventure = {
   occurredAt: string;
 };
 
+export type ProfileBadge = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  icon: string | null;
+  color: string | null;
+  xpRequired: number;
+  earnedAt: string | null;
+};
+
+export type ProfileGameData = {
+  badges: ProfileBadge[];
+  visitedSpotIds: string[];
+};
+
 export const fallbackDestinations: Destination[] = [
   {
     slug: 'dawis-heritage-wharf',
@@ -247,6 +263,38 @@ export async function loadRecentAdventures(userId: string): Promise<RecentAdvent
   }
 
   return activities.sort((a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt)).slice(0, 2);
+}
+
+/** Load the user's persistent collection and visited spot ids for Profile screens. */
+export async function loadProfileGameData(userId: string): Promise<ProfileGameData> {
+  const [badgesResult, userBadgesResult, progressResult] = await Promise.all([
+    supabase.from('badges').select('id, slug, name, description, icon, color, xp_required').order('created_at', { ascending: true }),
+    supabase.from('user_badges').select('badge_id, earned_at').eq('user_id', userId).order('earned_at', { ascending: false }),
+    supabase.from('user_spot_progress').select('tourist_spot_id, status').eq('user_id', userId).in('status', ['visited', 'completed']),
+  ]);
+
+  if (badgesResult.error || userBadgesResult.error || progressResult.error) {
+    throw new Error('Unable to load explorer achievements.');
+  }
+
+  const earnedAtByBadge = new Map(
+    (userBadgesResult.data ?? []).map((row) => [row.badge_id as string, row.earned_at as string]),
+  );
+  const badges: ProfileBadge[] = (badgesResult.data ?? []).map((row) => ({
+    id: row.id as string,
+    slug: row.slug as string,
+    name: row.name as string,
+    description: row.description as string,
+    icon: (row.icon as string | null) ?? null,
+    color: (row.color as string | null) ?? null,
+    xpRequired: Number(row.xp_required ?? 0),
+    earnedAt: earnedAtByBadge.get(row.id as string) ?? null,
+  }));
+
+  return {
+    badges: badges.sort((a, b) => Number(Boolean(b.earnedAt)) - Number(Boolean(a.earnedAt))),
+    visitedSpotIds: [...new Set((progressResult.data ?? []).map((row) => row.tourist_spot_id as string).filter(Boolean))],
+  };
 }
 
 /** Count distinct Heritage spots reached by this authenticated user since Monday. */

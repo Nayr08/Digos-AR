@@ -29,6 +29,7 @@
     "build/**",
     "dist/**",
     "coverage/**",
+    "public/ar/draco/**",
     "next-env.d.ts"
   ],
   "rules": {

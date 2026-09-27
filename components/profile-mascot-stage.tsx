@@ -112,7 +112,6 @@ export function ProfileMascotStage() {
       {/* oxlint-disable-next-line next/no-img-element */}
       <img key={pose} src={mascotAssets[assetKey]} alt={`DigosAR mascot ${pose} pose`} width={340} height={440} />
       {messageVisible && <span className="profile-mascot-message" key={messageVersion}>{mascotMessages[pose]}</span>}
-      <div className="profile-stage-platform" aria-hidden="true" />
       {showTapHint && <span className={`profile-mascot-tap-hint ${tapHintLeaving ? 'is-leaving' : ''}`}>Tap to change pose</span>}
     </button>
   );
