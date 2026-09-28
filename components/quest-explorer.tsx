@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Anchor, Award, Check, CheckCircle2, ChevronLeft, ChevronRight,
-  Compass, KeyRound, Landmark, LockKeyhole, Map as MapIcon, MapPin, Navigation, Route, Scan, ScrollText,
+  Compass, KeyRound, Landmark, LockKeyhole, MapPin, Navigation, Route, Scan, ScrollText,
   Sparkles, Trophy, Waves,
 } from 'lucide-react';
 import type { Destination } from '@/lib/digosar-data';
@@ -533,7 +533,7 @@ export function QuestExplorer({
 
   // Saved progress can hydrate before the parent unlock flag; keep locked visits on the new map route.
   if (view === 'active' && (!questUnlocked || stage === 'map')) return <div className="screen quest-map-experience">
-    <header className="quest-map-topbar"><button type="button" onClick={() => setView('list')} aria-label="Back to quests"><ChevronLeft size={21} /></button><h1>Digos Quest</h1><span aria-hidden="true"><MapIcon size={20} /></span></header>
+    <header className="quest-map-topbar"><button type="button" onClick={() => setView('list')} aria-label="Back to quests"><ChevronLeft size={21} /></button><h1>Digos Quest</h1></header>
     <p className="quest-map-subtitle">Explore. Discover. Complete the Trail.</p>
     <div className="quest-map-route-summary"><span><Route size={24} /></span><div><strong>Dawis Coastal Trail</strong><small>4 stops <i /> AR experiences <i /> Real rewards</small></div></div>
     <div className="quest-map-stage">

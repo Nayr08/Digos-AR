@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Camera, Check, Flashlight } from 'lucide-react';
+import { ArrowLeft, Camera, Check } from 'lucide-react';
 import * as THREE from 'three';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -85,7 +85,7 @@ const DAWIS_TARGET_CONFIGS: DawisTargetConfig[] = [
     id: 'terminal-platform',
     title: 'Old Dawis',
     modelSrc: historicalModel,
-    modelFootprint: 1.2,
+    modelFootprint: 0.72,
     isReward: true,
     infoSections: {
       about: { label: 'Discovery', title: 'Congratulations! You found Old Dawis.', body: 'Explore the old Dawis wharf model. The widened seaward platform was the wharf’s main gathering and landing space.' },
@@ -98,7 +98,7 @@ const DAWIS_TARGET_CONFIGS: DawisTargetConfig[] = [
     id: 'mooring-bollards',
     title: 'Dawis Quest · Rusted Bollards',
     modelSrc: bollardRewardModel,
-    modelFootprint: 1.2,
+    modelFootprint: 0.72,
     isReward: true,
     infoSections: {
       about: { label: 'Discovery', title: 'Rusted bollards', body: 'Scan complete. These metal fixtures gave boat lines a secure point beside the terminal edge.' },
@@ -111,7 +111,7 @@ const DAWIS_TARGET_CONFIGS: DawisTargetConfig[] = [
     id: 'support-piles',
     title: 'Dawis Quest · Support Piles',
     modelSrc: supportRewardModel,
-    modelFootprint: 1.2,
+    modelFootprint: 0.72,
     isReward: true,
     infoSections: {
       about: { label: 'Discovery', title: 'Support piles', body: 'Scan complete. Rows of concrete piles hold the pier and terminal above the water.' },
@@ -124,7 +124,7 @@ const DAWIS_TARGET_CONFIGS: DawisTargetConfig[] = [
     id: 'shoreline-rocks',
     title: 'Dawis Quest · Shoreline Rocks',
     modelSrc: shorelineRewardModel,
-    modelFootprint: 1.2,
+    modelFootprint: 0.72,
     isReward: true,
     infoSections: {
       about: { label: 'Discovery', title: 'Shoreline rocks', body: 'Scan complete. Rock clusters mark the transition from the beach into the open water around Dawis.' },
@@ -299,7 +299,7 @@ function tuneDawisMaterials(model: THREE.Object3D) {
   });
 }
 
-function prepareDawisModel(model: THREE.Object3D, targetFootprint = 2.65) {
+function prepareDawisModel(model: THREE.Object3D, targetFootprint = 2.65, centerOnTarget = false) {
   model.name = 'DHW_AR_Model';
   tuneDawisMaterials(model);
   model.traverse((child) => {
@@ -319,13 +319,14 @@ function prepareDawisModel(model: THREE.Object3D, targetFootprint = 2.65) {
   if (footprint > 0) model.scale.setScalar(targetFootprint / footprint);
   model.updateMatrixWorld(true);
 
-  // Center the footprint on the image target and put the lowest visible point
-  // just above the target plane to avoid a floating or buried model.
+  // Center the footprint on the image target. Rewards float around its center;
+  // landmark models sit on the target plane so their bases do not look buried.
   const fittedBox = new THREE.Box3().setFromObject(model);
   const fittedCenter = fittedBox.getCenter(new THREE.Vector3());
   model.position.x -= fittedCenter.x;
   model.position.z -= fittedCenter.z;
-  model.position.y += 0.02 - fittedBox.min.y;
+  if (centerOnTarget) model.position.y -= fittedCenter.y;
+  else model.position.y += 0.02 - fittedBox.min.y;
   model.updateMatrixWorld(true);
   return model;
 }
@@ -548,7 +549,7 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
         const loading = target.kind === 'city-map'
           ? buildDigosMapScene(gltfLoader)
           : target.modelSrc
-            ? gltfLoader.loadAsync(target.modelSrc).then((gltf) => prepareDawisModel(gltf.scene, target.modelFootprint))
+            ? gltfLoader.loadAsync(target.modelSrc).then((gltf) => prepareDawisModel(gltf.scene, target.modelFootprint, target.isReward))
             : Promise.reject(new Error(`No model configured for ${target.id}`));
         void loading.then((model) => {
           if (!mountedRef.current || attempt !== attemptRef.current || modelGeneration !== modelGenerationRef.current || mindarRef.current !== mindar) {
@@ -560,10 +561,10 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
           const finalScale = model.scale.clone();
           const finalPosition = model.position.clone();
           modelBaseScaleRef.current = isCityMap ? 1 : finalScale.x;
-          if (!isCityMap) finalPosition.y -= 0.05;
+          if (!isCityMap && !target.isReward) finalPosition.y -= 0.05;
           const startScale = finalScale.clone().multiplyScalar(isCityMap ? 1 : 0.78);
           const startPosition = finalPosition.clone();
-          if (!isCityMap) startPosition.y -= 0.03;
+          if (!isCityMap && !target.isReward) startPosition.y -= 0.03;
           model.scale.copy(startScale);
           model.position.copy(startPosition);
           modelPivot.add(model);
@@ -886,7 +887,7 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
   return <div ref={containerRef} className={`screen ar-camera-mode camera-${cameraState} ar-state-${presentationState.toLowerCase()} ${isDawisDetected ? 'target-detected' : ''}`}>
     <div className="ar-camera-gradient" aria-hidden="true" />
     {cameraState === 'active' ? <>
-      <header className="ar-camera-controls"><button type="button" onClick={exitCamera} aria-label="Exit AR camera"><ArrowLeft size={20} /></button><div><small>AR PREVIEW</small><strong>{isSearching ? 'Scanning...' : activeTargetTitle}</strong></div><button type="button" disabled aria-label="Flashlight unavailable in prototype"><Flashlight size={19} /></button></header>
+      <header className="ar-camera-controls"><button type="button" onClick={exitCamera} aria-label="Exit AR camera"><ArrowLeft size={20} /></button><div><small>AR PREVIEW</small><strong>{isSearching ? 'Scanning...' : activeTargetTitle}</strong></div></header>
        <section className="ar-scanner-stage" aria-label="DigosAR image-target scanner preview"><div className={`ar-scanner-frame ${isSearching ? '' : 'is-detected'}`} aria-hidden="true"><i className="corner top-left" /><i className="corner top-right" /><i className="corner bottom-left" /><i className="corner bottom-right" />{isSearching && <><span className="ar-scan-line" /><span className="ar-target-dot dot-one" /><span className="ar-target-dot dot-two" /></>}</div><div className="ar-scanner-copy">{isSearching ? <><strong>Point your camera at a DigosAR marker</strong><span>For the four-stop diorama, scan the separate Digos city-map card.</span></> : <><strong><Check size={16} /> {activeTargetTitle} found</strong><span>{isDawisEntryTarget ? 'Quest unlocked. Continue to the Dawis route.' : isCityMapTarget ? 'Four landmarks are rising. Choose a place below.' : presentationState === 'PRESENTING' ? 'Preparing the model...' : 'Model locked to the last tracked pose.'}</span></>}</div></section>
       {!isSearching && <>
         {!isCityMapTarget && <output className="ar-model-status">{isModelLoading ? `Preparing ${activeTargetTitle} model…` : modelLoadError ? 'Model could not be loaded' : activeTargetTitle}</output>}

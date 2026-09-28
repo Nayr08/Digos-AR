@@ -2,18 +2,22 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog } from '@base-ui/react/dialog';
+import { Select as SelectPrimitive } from '@base-ui/react/select';
+import { DawisNavigation } from '@/components/dawis-navigation';
+import { MAP_DESTINATIONS, walkingUrl } from '@/lib/dawis-navigation';
+import { ChevronDown } from 'lucide-react';
 import {
   ArrowLeft, ArrowRight, Award, Bell, Box as Cube, Camera, CheckCircle2, ChevronRight,
   Clock3, Compass, Footprints, Gamepad2, Gift,
   History, Home, Info, Landmark, Leaf, LockKeyhole, LogOut, Map, MapPin, Medal, TreePine,
-  Bookmark, Navigation, PlayCircle, Route, Scan, Search, Settings, SlidersHorizontal, Sparkles, Star, Trophy, UserRound,
+  Bookmark, Navigation, PlayCircle, Scan, Search, Settings, SlidersHorizontal, Sparkles, Star, Trophy, UserRound,
   Eye, EyeOff,
 } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/lib/supabase';
 import {
-  fallbackDestinations, loadProfileGameData, loadQuestForSpot, loadRecentAdventures, loadTouristSpots, loadWeeklyHeritageProgress,
+  fallbackDestinations, loadProfileGameData, loadQuestForSpot, loadTouristSpots, loadWeeklyHeritageProgress,
   type Destination, type ProfileBadge, type ProfileGameData, type SpotQuest,
 } from '@/lib/digosar-data';
 import { LoadingSkeleton } from '@/components/loading-skeleton';
@@ -30,7 +34,6 @@ import { loadDawisQuestProgress, recordDawisQuestDiscovery } from '@/lib/quest-p
 type Screen = 'home' | 'explore' | 'details' | 'ar' | 'quest' | 'quiz' | 'achievements' | 'profile' | 'navigation' | 'model';
 type ProfileData = { display_name: string; username: string; total_xp: number; level: number };
 type DashboardStats = { spots_visited: number; quizzes_completed: number; badges_earned: number };
-type RecentTrail = { slug: string; status: 'resume' | 'completed'; updatedAt: number };
 type AchievementToast = { badgeNames: string[] };
 
 const badgeIcons: Record<string, typeof Compass> = {
@@ -109,10 +112,11 @@ function LightHeader({ title, back, onBack, showAvatar = true }: { title: string
   return <header className="light-header">{back ? <button onClick={onBack} aria-label="Back"><ArrowLeft size={20} /></button> : <span className="header-spacer" aria-hidden="true" />}<h1>{title}</h1>{showAvatar ? <div className="mini-avatar">DR</div> : <span className="header-spacer" aria-hidden="true" />}</header>;
 }
 
-function HomeScreen({ go, open, openAR, spots, recentTrail, displayName, challengeProgress }: { go: (s: Screen) => void; open: (d: Destination) => void; openAR: (d: Destination) => void; spots: Destination[]; recentTrail: RecentTrail | null; displayName: string; challengeProgress: number }) {
+function HomeScreen({ go, open, spots, displayName, challengeProgress }: { go: (s: Screen) => void; open: (d: Destination) => void; spots: Destination[]; displayName: string; challengeProgress: number }) {
   const [query, setQuery] = useState('');
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const recentSpot = recentTrail ? spots.find((item) => item.slug === recentTrail.slug) ?? null : null;
+  const [mapOpen, setMapOpen] = useState(false);
+  const [mapDestination, setMapDestination] = useState(MAP_DESTINATIONS[0]);
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning,' : hour < 18 ? 'Good afternoon,' : 'Good evening,';
   return <div className="screen home-screen">
@@ -123,7 +127,37 @@ function HomeScreen({ go, open, openAR, spots, recentTrail, displayName, challen
         <MascotGuide state="idle" title={homeMascotMessages[0].title} message={homeMascotMessages[0].text} rotatingMessages={homeMascotMessages} />
       </section>
       <label className="glass-search"><Search size={19} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search tourist spots..." /><button onClick={() => go('explore')} aria-label="Search"><ChevronRight size={18} /></button></label>
-      <section className={`home-recent-trail ${recentTrail?.status === 'completed' ? 'completed' : ''}`}><small><Route size={17} aria-hidden="true" /> CONTINUE YOUR TRAIL</small>{recentSpot ? <div><span aria-hidden="true"><Route size={18} /></span><p><strong>{recentSpot.name}</strong><small>{recentSpot.distance} away · latest AR trail</small></p><button onClick={() => recentTrail?.status === 'completed' ? open(recentSpot) : openAR(recentSpot)}>{recentTrail?.status === 'completed' ? <><CheckCircle2 size={14} /> Completed</> : <>Resume <ChevronRight size={16} /></>}</button></div> : <div><span aria-hidden="true"><Route size={18} /></span><p><strong>No recent AR trail</strong><small>Choose a destination to begin.</small></p><button onClick={() => go('explore')}>Explore <ChevronRight size={16} /></button></div>}</section>
+      <section className="home-map-entry" aria-label="View the Digos map"><small><Map size={17} aria-hidden="true" /> VIEW MAP</small><div><span aria-hidden="true"><MapPin size={18} /></span><p><strong>Explore Digos</strong><small>Choose a spot and see directions.</small></p><button type="button" onClick={() => setMapOpen(true)}>View Map <ChevronRight size={16} /></button></div></section>
+      <Dialog.Root open={mapOpen} onOpenChange={setMapOpen}>
+        <Dialog.Portal>
+          <Dialog.Backdrop className="quest-coming-soon-backdrop" />
+          <Dialog.Popup className="dawis-map-dialog">
+            <header className="dawis-map-header"><div><small>EXPLORE DIGOS</small><Dialog.Title>{mapDestination.name}</Dialog.Title></div><Dialog.Close aria-label="Close map">×</Dialog.Close></header>
+            <div className="dawis-map-dialog-scroll">
+              <Dialog.Description className="dawis-map-intro">Check your location and distance to this destination.</Dialog.Description>
+              <div className="map-destination-picker"><span id="map-destination-label">Destination</span>
+                <SelectPrimitive.Root value={mapDestination.id} onValueChange={value => setMapDestination(MAP_DESTINATIONS.find(item => item.id === value) ?? MAP_DESTINATIONS[0])}>
+                  <SelectPrimitive.Trigger className="map-destination-trigger" aria-labelledby="map-destination-label">
+                    <SelectPrimitive.Value>{mapDestination.name}</SelectPrimitive.Value>
+                    <SelectPrimitive.Icon><ChevronDown size={18} /></SelectPrimitive.Icon>
+                  </SelectPrimitive.Trigger>
+                  <SelectPrimitive.Portal>
+                    <SelectPrimitive.Positioner className="map-destination-positioner" side="bottom" align="start" sideOffset={6}>
+                      <SelectPrimitive.Popup className="map-destination-popup">
+                        <SelectPrimitive.List>{MAP_DESTINATIONS.map(item => <SelectPrimitive.Item className="map-destination-option" key={item.id} value={item.id}>
+                          <SelectPrimitive.ItemText>{item.name}</SelectPrimitive.ItemText>
+                        </SelectPrimitive.Item>)}</SelectPrimitive.List>
+                      </SelectPrimitive.Popup>
+                    </SelectPrimitive.Positioner>
+                  </SelectPrimitive.Portal>
+                </SelectPrimitive.Root>
+              </div>
+              <DawisNavigation key={mapDestination.id} destination={mapDestination} />
+            </div>
+            <footer className="dawis-map-dialog-footer"><a href={walkingUrl(mapDestination)} target="_blank" rel="noopener noreferrer"><MapPin size={18} />Walking directions in Google Maps<ArrowRight size={18} /></a></footer>
+          </Dialog.Popup>
+        </Dialog.Portal>
+      </Dialog.Root>
       <div className="popular-head"><div><small>CURATED FOR YOU</small><h2>Popular Tourist Spots</h2></div><button onClick={() => go('explore')}>View all</button></div>
       <div className="popular-rail">{spots.map((spot) => <button className="popular-card" aria-label={`Open ${spot.name}`} key={spot.slug} onClick={() => open(spot)}>
         <Photo spot={spot}><span className="card-bookmark" aria-hidden="true"><Bookmark size={18} /></span><div className="card-glass"><div><small>{spot.type}</small><h3>{spot.name}</h3><p><MapPin size={13} /> {spot.distance}</p></div><strong><Star size={15} fill="currentColor" /> +{spot.xpReward} XP</strong></div></Photo>
@@ -427,7 +461,6 @@ export default function DigosAR() {
   const [bootTimedOut, setBootTimedOut] = useState(false);
   const bootTimeoutRef = useRef<number | null>(null);
   const authRedirectTimerRef = useRef<number | null>(null);
-  const [recentTrail, setRecentTrail] = useState<RecentTrail | null>(null);
   const [unlockedQuestSlugs, setUnlockedQuestSlugs] = useState<string[]>([]);
   const [dawisQuestUnlocked, setDawisQuestUnlocked] = useState(false);
   const dawisQuestUnlockedRef = useRef(false);
@@ -480,18 +513,6 @@ export default function DigosAR() {
     const { data, error } = await supabase.from('user_dashboard_stats').select('spots_visited, quizzes_completed, badges_earned').eq('user_id', user.id).maybeSingle();
     if (!error && data) setStats(data as DashboardStats);
   }, [user]);
-  const refreshRecentTrail = useCallback(async () => {
-    if (!user) return;
-    try {
-      const latest = (await loadRecentAdventures(user.id))[0];
-      if (!latest) { setRecentTrail(null); return; }
-      const latestSpot = spots.find((item) => item.id === latest.spotId);
-      if (!latestSpot) return;
-      setRecentTrail({ slug: latestSpot.slug, status: latest.status === 'completed' ? 'completed' : 'resume', updatedAt: Date.parse(latest.occurredAt) });
-    } catch {
-      // Keep the optimistic local trail if Supabase is temporarily unavailable.
-    }
-  }, [user, spots]);
   const refreshChallengeProgress = useCallback(async () => {
     if (!user) { setChallengeProgress(0); return; }
     try { setChallengeProgress(Math.min(await loadWeeklyHeritageProgress(user.id), weeklyChallenge.target)); }
@@ -532,10 +553,6 @@ export default function DigosAR() {
       }, 850);
       return;
     }
-    if (next === 'ar') {
-      const trail = { slug: spot.slug, status: 'resume' as const, updatedAt: Date.now() };
-      setRecentTrail(trail);
-    }
     transitionTo(next);
   };
   useEffect(() => () => {
@@ -554,16 +571,8 @@ export default function DigosAR() {
     if (user) void refreshChallengeProgress();
     else setChallengeProgress(0);
   }, [screen, user, refreshChallengeProgress]);
-  useEffect(() => {
-    if (screen === 'home' && user) void refreshRecentTrail();
-  }, [screen, user, refreshRecentTrail]);
   const open = (d: Destination) => { setSpot(d); transitionTo('details') };
-  const saveRecentTrail = useCallback((d: Destination, status: RecentTrail['status']) => {
-    const trail = { slug: d.slug, status, updatedAt: Date.now() };
-    setRecentTrail(trail);
-  }, []);
-  const handleQuestComplete = useCallback(async (completedSpot: Destination) => {
-    saveRecentTrail(completedSpot, 'completed');
+  const handleQuestComplete = useCallback(async () => {
     if (!user) return;
     const previouslyEarned = new Set(knownEarnedBadgeIdsRef.current);
     // The quiz insert runs server-side XP and badge triggers. Refresh only
@@ -572,11 +581,10 @@ export default function DigosAR() {
       refreshGameData(),
       refreshProfile(false),
       refreshDashboardStats(),
-      refreshRecentTrail(),
       refreshChallengeProgress(),
     ]);
     notifyNewAchievements(freshGameData, previouslyEarned);
-  }, [notifyNewAchievements, refreshChallengeProgress, refreshDashboardStats, refreshGameData, refreshProfile, refreshRecentTrail, saveRecentTrail, user]);
+  }, [notifyNewAchievements, refreshChallengeProgress, refreshDashboardStats, refreshGameData, refreshProfile, user]);
   const recordTargetScan = useCallback((targetId: string) => {
     const locationTargets = new Set(['dawis', 'old-dawis', 'terminal-platform', 'mooring-bollards', 'support-piles', 'shoreline-rocks']);
     if (!locationTargets.has(targetId)) return;
@@ -633,14 +641,12 @@ export default function DigosAR() {
         refreshGameData(),
         refreshProfile(false),
         refreshDashboardStats(),
-        refreshRecentTrail(),
         refreshChallengeProgress(),
       ]);
       notifyNewAchievements(freshGameData, previouslyEarned);
     })().catch((error) => console.error('[DigosAR Progress] Scan progress refresh failed', error));
-  }, [notifyNewAchievements, refreshChallengeProgress, refreshDashboardStats, refreshGameData, refreshProfile, refreshRecentTrail, spots, user]);
+  }, [notifyNewAchievements, refreshChallengeProgress, refreshDashboardStats, refreshGameData, refreshProfile, spots, user]);
   const openAR = (d: Destination) => {
-    saveRecentTrail(d, 'resume');
     if (user && d.id && d.slug !== 'dawis-heritage-wharf') {
       const visitedAt = new Date().toISOString();
       void supabase.from('user_spot_progress').upsert({
@@ -767,7 +773,7 @@ export default function DigosAR() {
   }, []);
   const active: Screen = screen === 'details' || screen === 'navigation' || screen === 'model' ? 'explore' : screen === 'quiz' ? 'quest' : screen === 'achievements' ? 'profile' : screen;
   let content: React.ReactNode;
-  if (screen === 'home') content = <HomeScreen go={go} open={open} openAR={openAR} spots={spots} recentTrail={recentTrail} displayName={profileLoading ? '' : profile?.display_name || 'Explorer'} challengeProgress={challengeProgress} />;
+  if (screen === 'home') content = <HomeScreen go={go} open={open} spots={spots} displayName={profileLoading ? '' : profile?.display_name || 'Explorer'} challengeProgress={challengeProgress} />;
   else if (screen === 'explore') content = <ExploreScreen open={open} spots={spots} />;
   else if (screen === 'details') content = <DetailsScreen spot={spot} go={go} />;
   else if (screen === 'ar') content = <ARCameraScreen onBack={() => go(previous === 'ar' ? 'home' : previous)} onTargetScanned={recordTargetScan} onOpenQuest={() => go('quest')} />;
@@ -776,7 +782,7 @@ export default function DigosAR() {
   else if (screen === 'quest') content = <QuestExplorer spots={spots} unlockedSlugs={unlockedQuestSlugs} questUnlocked={dawisQuestUnlocked} userId={user?.id} scanSpot={(selectedSpot) => { setResumeQuestOnReturn(true); openAR(selectedSpot); }} onComplete={handleQuestComplete} openQuiz={(selectedSpot) => { setSpot(selectedSpot); go('quiz'); }} resumeQuest={resumeQuestOnReturn} onResumeQuestConsumed={() => setResumeQuestOnReturn(false)} />;
   else if (screen === 'quiz') content = <QuestScreen go={go} spot={spot} userId={user?.id} onComplete={handleQuestComplete} />;
   else if (screen === 'achievements') content = <AchievementsScreen back={() => go('profile')} profile={profile} stats={stats} gameData={gameData} spots={spots} />;
-  else if (!user) content = <HomeScreen go={go} open={open} openAR={openAR} spots={spots} recentTrail={recentTrail} displayName="Explorer" challengeProgress={0} />;
+  else if (!user) content = <HomeScreen go={go} open={open} spots={spots} displayName="Explorer" challengeProgress={0} />;
   else if (!profile) content = <div className="screen profile-screen" />;
   else content = <ProfileScreen user={user} profile={profile} stats={stats} gameData={gameData} onSignOut={() => void signOut()} onContinueExploring={() => go('explore')} refreshProfile={refreshProfile} signingOut={actionLoading} />;
   const isGloballyLoading = screen !== 'ar' && !bootTimedOut && (spotsLoading || authLoading || profileLoading || transitionLoading || accountLoading || actionLoading);
