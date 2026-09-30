@@ -239,11 +239,12 @@ function DetailsScreen({ spot, go, openMap }: { spot: Destination; go: (s: Scree
   const [modelComingSoon, setModelComingSoon] = useState(false);
   return <div className="screen detail-screen"><Photo spot={spot} className="detail-hero"><div className="image-shade" /><div className="detail-top"><GlassIcon label="Back" onClick={() => go('explore')}><ArrowLeft size={20} /></GlassIcon></div><div className="detail-image-title"><small>{spot.type} · {spot.distance}</small><h1>{spot.name}</h1></div></Photo>
     <article className="info-sheet"><span className="sheet-handle" aria-hidden="true" /><div className="spot-meta"><p><MapPin size={13} /> {spot.location}</p><span>+100 XP</span></div><h1>{spot.name}</h1><div className="fact-row"><div><Leaf size={17} /><span><small>Category</small><strong>{spot.type}</strong></span></div><div><Clock3 size={17} /><span><small>Best time</small><strong>{spot.best}</strong></span></div><div><Footprints size={17} /><span><small>Distance</small><strong>{spot.distance}</strong></span></div></div>
-      <section className="story"><div className="story-kicker"><small>ABOUT THIS PLACE</small></div><h2>A place worth knowing</h2><p>{spot.description}</p></section>
+      <section className="story"><div className="story-kicker"><small>ABOUT THIS PLACE</small></div><h2>A place worth knowing</h2><p>{spot.about || spot.description}</p></section>
       <section className="story-columns" aria-label="Heritage highlights">
         <article className="story-card story-history-card"><div className="story-card-top"><small>HISTORY</small></div><p>{spot.history}</p></article>
         <article className="story-card story-culture-card"><div className="story-card-top"><small>CULTURAL SIGNIFICANCE</small></div><p>{spot.culture}</p></article>
       </section>
+      <section className="visitor-note"><small>VISITOR NOTE</small><p>{spot.visitorTip}</p></section>
       <div className="media-preview"><Photo spot={spot}><PlayCircle size={34} /><span><small>MULTIMEDIA PREVIEW</small><strong>Watch the local story</strong></span></Photo><button onClick={() => isDawis ? go('model') : setModelComingSoon(true)}><Cube size={18} /> View 3D Model</button></div>
       <div className={`detail-bottom-actions ${isDawis ? '' : 'is-quest-coming-soon'}`}>
         {isDawis ? <button onClick={() => go('quest')}><Gamepad2 size={18} /> Quest</button> : <button type="button" disabled aria-label="Quest coming soon"><Gamepad2 size={18} /><span>Quest</span><small>Coming soon</small></button>}

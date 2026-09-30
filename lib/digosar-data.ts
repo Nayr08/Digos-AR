@@ -6,6 +6,7 @@ export type Destination = {
   name: string;
   location: string;
   description: string;
+  about: string;
   type: string;
   best: string;
   distance: string;
@@ -14,6 +15,7 @@ export type Destination = {
   position: string;
   history: string;
   culture: string;
+  visitorTip: string;
   xpReward: number;
 };
 
@@ -75,8 +77,10 @@ export const fallbackDestinations: Destination[] = [
     image: '/touristspot/dawis-coast.webp',
     position: 'center',
     description: 'A waterfront promenade where Digos wakes to views of the Davao Gulf.',
+    about: 'Dawis Heritage Wharf looks out across the Davao Gulf. It is a coastal place for sunrise views, community visits, and a closer look at the shoreline.',
     history: 'The Dawis waterfront reflects the city’s long relationship with coastal travel, fishing, and community trade.',
     culture: 'Sunrise walks, family gatherings, and views across the gulf make the wharf a shared civic space.',
+    visitorTip: 'Visit near sunrise for the gulf views. Bring water and check the weather before a coastal walk.',
     xpReward: 100,
   },
   {
@@ -90,8 +94,10 @@ export const fallbackDestinations: Destination[] = [
     image: '/touristspot/digos-rizalpark.webp',
     position: 'center',
     description: 'A central public park for civic events, quiet breaks, and community gatherings.',
+    about: 'A green space in Digos’s city center, Rizal Park brings a monument and a public gathering place together.',
     history: 'Named for national hero José Rizal, the park is part of the city center’s civic landscape.',
     culture: 'The park serves as an accessible meeting place and venue for public celebrations in Digos.',
+    visitorTip: 'Take a moment at the Rizal monument and follow posted rules around the park’s public spaces.',
     xpReward: 100,
   },
   {
@@ -105,8 +111,10 @@ export const fallbackDestinations: Destination[] = [
     image: '/touristspot/digos-ecopark.webp',
     position: 'center',
     description: 'A green learning space dedicated to trees, biodiversity, and environmental stewardship.',
+    about: 'Set in Sitio San Nicolas, Tres de Mayo, this city arboretum was established to support nature, recreation, and environmental learning.',
     history: 'The city developed the eco park and arboretum as a place for conservation, recreation, and environmental activities.',
     culture: 'Tree planting and nature education connect visitors with Digos City’s environmental programs.',
+    visitorTip: 'Check on-site guidance for current facilities and activities before planning your visit.',
     xpReward: 100,
   },
   {
@@ -120,8 +128,10 @@ export const fallbackDestinations: Destination[] = [
     image: '/touristspot/digos-mother-tree.webp',
     position: 'center',
     description: 'The cathedral church of the Diocese of Digos and a living center of local Catholic faith.',
+    about: 'The cathedral of the Diocese of Digos stands on Rizal Avenue and remains a place for worship and Marian devotion.',
     history: 'The cathedral is closely tied to the growth of the Diocese of Digos and its Marian devotion.',
     culture: 'Worship, feast-day observances, and diocesan gatherings make the cathedral a major spiritual landmark.',
+    visitorTip: 'Please visit respectfully during worship. Check parish channels for current Mass times before you go.',
     xpReward: 100,
   },
 ];
@@ -134,6 +144,7 @@ type SpotRow = {
   name: string;
   location: string;
   short_description: string;
+  about: string | null;
   history: string | null;
   cultural_significance: string | null;
   best_time_to_visit: string | null;
@@ -147,7 +158,7 @@ type SpotRow = {
 export async function loadTouristSpots(): Promise<Destination[]> {
   const { data, error } = await supabase
     .from('tourist_spots')
-    .select('id, slug, name, location, short_description, history, cultural_significance, best_time_to_visit, distance_km, rating, hero_image_url, xp_reward, categories(name)')
+    .select('id, slug, name, location, short_description, about, history, cultural_significance, best_time_to_visit, distance_km, rating, hero_image_url, xp_reward, categories(name)')
     .in('slug', featuredSlugs)
     .eq('is_published', true);
 
@@ -168,6 +179,7 @@ export async function loadTouristSpots(): Promise<Destination[]> {
       name: row.name,
       location: row.location,
       description: row.short_description,
+      about: row.about ?? fallback.about,
       type: category ?? fallback.type,
       best: row.best_time_to_visit ?? fallback.best,
       distance,
