@@ -8,7 +8,10 @@ export function AppStartupIntro() {
 
   useEffect(() => {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const timer = window.setTimeout(() => setVisible(false), reducedMotion ? 180 : 1420);
+    // Keep the brand visible even when motion is reduced. The CSS switches to a
+    // still logo in that mode, so shortening the lifetime made the splash vanish
+    // before it could be seen on some iOS Home Screen launches.
+    const timer = window.setTimeout(() => setVisible(false), reducedMotion ? 950 : 1420);
     return () => window.clearTimeout(timer);
   }, []);
 
