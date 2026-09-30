@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog } from '@base-ui/react/dialog';
 import { Select as SelectPrimitive } from '@base-ui/react/select';
 import { DawisNavigation } from '@/components/dawis-navigation';
-import { MAP_DESTINATIONS, walkingUrl } from '@/lib/dawis-navigation';
+import { MAP_DESTINATIONS, walkingUrl, type MapDestination } from '@/lib/dawis-navigation';
 import { ChevronDown } from 'lucide-react';
 import {
   ArrowLeft, ArrowRight, Award, Bell, Box as Cube, Camera, CheckCircle2, ChevronRight,
@@ -32,6 +32,16 @@ import { usernameToAuthEmail } from '@/lib/auth';
 import { loadDawisQuestProgress, recordDawisQuestDiscovery } from '@/lib/quest-progress';
 
 type Screen = 'home' | 'explore' | 'details' | 'ar' | 'quest' | 'quiz' | 'achievements' | 'profile' | 'navigation' | 'model';
+const mapIdsBySpotSlug: Record<string, string> = {
+  'dawis-heritage-wharf': 'dawis',
+  'rizal-park': 'rizal-park',
+  'digos-city-eco-park-arboretum': 'eco-park',
+  'mary-mother-mediatrix-cathedral': 'mediatrix-cathedral',
+};
+function mapDestinationForSpot(spot: Destination): MapDestination {
+  const mapId = mapIdsBySpotSlug[spot.slug];
+  return MAP_DESTINATIONS.find(destination => destination.id === mapId) ?? MAP_DESTINATIONS[0];
+}
 type ProfileData = { display_name: string; username: string; total_xp: number; level: number };
 type DashboardStats = { spots_visited: number; quizzes_completed: number; badges_earned: number };
 type AchievementToast = { badgeNames: string[] };
@@ -112,11 +122,9 @@ function LightHeader({ title, back, onBack, showAvatar = true }: { title: string
   return <header className="light-header">{back ? <button onClick={onBack} aria-label="Back"><ArrowLeft size={20} /></button> : <span className="header-spacer" aria-hidden="true" />}<h1>{title}</h1>{showAvatar ? <div className="mini-avatar">DR</div> : <span className="header-spacer" aria-hidden="true" />}</header>;
 }
 
-function HomeScreen({ go, open, spots, displayName, challengeProgress }: { go: (s: Screen) => void; open: (d: Destination) => void; spots: Destination[]; displayName: string; challengeProgress: number }) {
+function HomeScreen({ go, open, openMap, spots, displayName, challengeProgress }: { go: (s: Screen) => void; open: (d: Destination) => void; openMap: (destination: MapDestination) => void; spots: Destination[]; displayName: string; challengeProgress: number }) {
   const [query, setQuery] = useState('');
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [mapOpen, setMapOpen] = useState(false);
-  const [mapDestination, setMapDestination] = useState(MAP_DESTINATIONS[0]);
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning,' : hour < 18 ? 'Good afternoon,' : 'Good evening,';
   return <div className="screen home-screen">
@@ -127,37 +135,7 @@ function HomeScreen({ go, open, spots, displayName, challengeProgress }: { go: (
         <MascotGuide state="idle" title={homeMascotMessages[0].title} message={homeMascotMessages[0].text} rotatingMessages={homeMascotMessages} />
       </section>
       <label className="glass-search"><Search size={19} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search tourist spots..." /><button onClick={() => go('explore')} aria-label="Search"><ChevronRight size={18} /></button></label>
-      <section className="home-map-entry" aria-label="View the Digos map"><small><Map size={17} aria-hidden="true" /> VIEW MAP</small><div><span aria-hidden="true"><MapPin size={18} /></span><p><strong>Explore Digos</strong><small>Choose a spot and see directions.</small></p><button type="button" onClick={() => setMapOpen(true)}>View Map <ChevronRight size={16} /></button></div></section>
-      <Dialog.Root open={mapOpen} onOpenChange={setMapOpen}>
-        <Dialog.Portal>
-          <Dialog.Backdrop className="quest-coming-soon-backdrop" />
-          <Dialog.Popup className="dawis-map-dialog">
-            <header className="dawis-map-header"><div><small>EXPLORE DIGOS</small><Dialog.Title>{mapDestination.name}</Dialog.Title></div><Dialog.Close aria-label="Close map">×</Dialog.Close></header>
-            <div className="dawis-map-dialog-scroll">
-              <Dialog.Description className="dawis-map-intro">Check your location and distance to this destination.</Dialog.Description>
-              <div className="map-destination-picker"><span id="map-destination-label">Destination</span>
-                <SelectPrimitive.Root value={mapDestination.id} onValueChange={value => setMapDestination(MAP_DESTINATIONS.find(item => item.id === value) ?? MAP_DESTINATIONS[0])}>
-                  <SelectPrimitive.Trigger className="map-destination-trigger" aria-labelledby="map-destination-label">
-                    <SelectPrimitive.Value>{mapDestination.name}</SelectPrimitive.Value>
-                    <SelectPrimitive.Icon><ChevronDown size={18} /></SelectPrimitive.Icon>
-                  </SelectPrimitive.Trigger>
-                  <SelectPrimitive.Portal>
-                    <SelectPrimitive.Positioner className="map-destination-positioner" side="bottom" align="start" sideOffset={6}>
-                      <SelectPrimitive.Popup className="map-destination-popup">
-                        <SelectPrimitive.List>{MAP_DESTINATIONS.map(item => <SelectPrimitive.Item className="map-destination-option" key={item.id} value={item.id}>
-                          <SelectPrimitive.ItemText>{item.name}</SelectPrimitive.ItemText>
-                        </SelectPrimitive.Item>)}</SelectPrimitive.List>
-                      </SelectPrimitive.Popup>
-                    </SelectPrimitive.Positioner>
-                  </SelectPrimitive.Portal>
-                </SelectPrimitive.Root>
-              </div>
-              <DawisNavigation key={mapDestination.id} destination={mapDestination} />
-            </div>
-            <footer className="dawis-map-dialog-footer"><a href={walkingUrl(mapDestination)} target="_blank" rel="noopener noreferrer"><MapPin size={18} />Walking directions in Google Maps<ArrowRight size={18} /></a></footer>
-          </Dialog.Popup>
-        </Dialog.Portal>
-      </Dialog.Root>
+      <section className="home-map-entry" aria-label="View the Digos map"><small><Map size={17} aria-hidden="true" /> VIEW MAP</small><div><span aria-hidden="true"><MapPin size={18} /></span><p><strong>Explore Digos</strong><small>Choose a spot and see directions.</small></p><button type="button" onClick={() => openMap(MAP_DESTINATIONS[0])}>View Map <ChevronRight size={16} /></button></div></section>
       <div className="popular-head"><div><small>CURATED FOR YOU</small><h2>Popular Tourist Spots</h2></div><button onClick={() => go('explore')}>View all</button></div>
       <div className="popular-rail">{spots.map((spot) => <button className="popular-card" aria-label={`Open ${spot.name}`} key={spot.slug} onClick={() => open(spot)}>
         <Photo spot={spot}><span className="card-bookmark" aria-hidden="true"><Bookmark size={18} /></span><div className="card-glass"><div><small>{spot.type}</small><h3>{spot.name}</h3><p><MapPin size={13} /> {spot.distance}</p></div><strong><Star size={15} fill="currentColor" /> +{spot.xpReward} XP</strong></div></Photo>
@@ -165,6 +143,39 @@ function HomeScreen({ go, open, spots, displayName, challengeProgress }: { go: (
       <ChallengeCard challenge={{ ...weeklyChallenge, progress: challengeProgress }} onContinue={() => go('explore')} />
     </div>
   </div>;
+}
+
+function ExploreMapDialog({ open, onOpenChange, destination, setDestination }: { open: boolean; onOpenChange: (open: boolean) => void; destination: MapDestination; setDestination: (destination: MapDestination) => void }) {
+  return <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <Dialog.Portal>
+      <Dialog.Backdrop className="quest-coming-soon-backdrop" />
+      <Dialog.Popup className="dawis-map-dialog">
+        <header className="dawis-map-header"><div><small>EXPLORE DIGOS</small><Dialog.Title>{destination.name}</Dialog.Title></div><Dialog.Close aria-label="Close map">×</Dialog.Close></header>
+        <div className="dawis-map-dialog-scroll">
+          <Dialog.Description className="dawis-map-intro">Check your location and distance to this destination.</Dialog.Description>
+          <div className="map-destination-picker"><span id="map-destination-label">Destination</span>
+            <SelectPrimitive.Root value={destination.id} onValueChange={value => setDestination(MAP_DESTINATIONS.find(item => item.id === value) ?? MAP_DESTINATIONS[0])}>
+              <SelectPrimitive.Trigger className="map-destination-trigger" aria-labelledby="map-destination-label">
+                <SelectPrimitive.Value>{destination.name}</SelectPrimitive.Value>
+                <SelectPrimitive.Icon><ChevronDown size={18} /></SelectPrimitive.Icon>
+              </SelectPrimitive.Trigger>
+              <SelectPrimitive.Portal>
+                <SelectPrimitive.Positioner className="map-destination-positioner" side="bottom" align="start" sideOffset={6}>
+                  <SelectPrimitive.Popup className="map-destination-popup">
+                    <SelectPrimitive.List>{MAP_DESTINATIONS.map(item => <SelectPrimitive.Item className="map-destination-option" key={item.id} value={item.id}>
+                      <SelectPrimitive.ItemText>{item.name}</SelectPrimitive.ItemText>
+                    </SelectPrimitive.Item>)}</SelectPrimitive.List>
+                  </SelectPrimitive.Popup>
+                </SelectPrimitive.Positioner>
+              </SelectPrimitive.Portal>
+            </SelectPrimitive.Root>
+          </div>
+          <DawisNavigation key={destination.id} destination={destination} />
+        </div>
+        <footer className="dawis-map-dialog-footer"><a href={walkingUrl(destination)} target="_blank" rel="noopener noreferrer"><MapPin size={18} />Walking directions in Google Maps<ArrowRight size={18} /></a></footer>
+      </Dialog.Popup>
+    </Dialog.Portal>
+  </Dialog.Root>;
 }
 
 function ExploreScreen({ open, spots }: { open: (d: Destination) => void; spots: Destination[] }) {
@@ -223,7 +234,7 @@ function ExploreScreen({ open, spots }: { open: (d: Destination) => void; spots:
     </section>
   </div>;
 }
-function DetailsScreen({ spot, go }: { spot: Destination; go: (s: Screen) => void }) {
+function DetailsScreen({ spot, go, openMap }: { spot: Destination; go: (s: Screen) => void; openMap: (spot: Destination) => void }) {
   const isDawis = spot.slug === 'dawis-heritage-wharf';
   const [modelComingSoon, setModelComingSoon] = useState(false);
   return <div className="screen detail-screen"><Photo spot={spot} className="detail-hero"><div className="image-shade" /><div className="detail-top"><GlassIcon label="Back" onClick={() => go('explore')}><ArrowLeft size={20} /></GlassIcon></div><div className="detail-image-title"><small>{spot.type} · {spot.distance}</small><h1>{spot.name}</h1></div></Photo>
@@ -234,8 +245,9 @@ function DetailsScreen({ spot, go }: { spot: Destination; go: (s: Screen) => voi
         <article className="story-card story-culture-card"><div className="story-card-top"><span className="story-card-icon"><Medal size={18} /></span><small>COMMUNITY</small></div><h3>Cultural significance</h3><p>{spot.culture}</p></article>
       </section>
       <div className="media-preview"><Photo spot={spot}><PlayCircle size={34} /><span><small>MULTIMEDIA PREVIEW</small><strong>Watch the local story</strong></span></Photo><button onClick={() => isDawis ? go('model') : setModelComingSoon(true)}><Cube size={18} /> View 3D Model</button></div>
-      <div className={`detail-bottom-actions ${isDawis ? '' : 'is-coming-soon'}`}>
-        {isDawis ? <><button onClick={() => go('quest')}><Gamepad2 size={18} /> Quest</button><button onClick={() => go('navigation')}><Navigation size={18} fill="currentColor" /> Go</button></> : <><button type="button" disabled aria-label="Quest coming soon"><Gamepad2 size={18} /><span>Quest</span><small>Coming soon</small></button><button type="button" disabled aria-label="Go coming soon"><Navigation size={18} fill="currentColor" /><span>Go</span><small>Coming soon</small></button></>}
+      <div className={`detail-bottom-actions ${isDawis ? '' : 'is-quest-coming-soon'}`}>
+        {isDawis ? <button onClick={() => go('quest')}><Gamepad2 size={18} /> Quest</button> : <button type="button" disabled aria-label="Quest coming soon"><Gamepad2 size={18} /><span>Quest</span><small>Coming soon</small></button>}
+        <button type="button" onClick={() => openMap(spot)}><Navigation size={18} fill="currentColor" /> Go</button>
       </div>
     </article><SpotMascotGuide initialMessage="Scroll down for more details about this spot!" />
     <Dialog.Root open={modelComingSoon} onOpenChange={setModelComingSoon}>
@@ -447,6 +459,8 @@ export default function DigosAR() {
   const [screen, setScreen] = useState<Screen>('explore');
   const [spots, setSpots] = useState<Destination[]>(destinations);
   const [spot, setSpot] = useState(destinations[0]);
+  const [exploreMapOpen, setExploreMapOpen] = useState(false);
+  const [mapDestination, setMapDestination] = useState<MapDestination>(MAP_DESTINATIONS[0]);
   const [previous, setPrevious] = useState<Screen>('home');
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<ProfileData | null>(null);
@@ -558,6 +572,11 @@ export default function DigosAR() {
     }
     transitionTo(next);
   };
+  const openMap = (destination: MapDestination) => {
+    setMapDestination(destination);
+    setExploreMapOpen(true);
+  };
+  const openMapForSpot = (selectedSpot: Destination) => openMap(mapDestinationForSpot(selectedSpot));
   useEffect(() => () => {
     if (authRedirectTimerRef.current !== null) window.clearTimeout(authRedirectTimerRef.current);
     if (questUnlockToastTimerRef.current !== null) window.clearTimeout(questUnlockToastTimerRef.current);
@@ -776,16 +795,16 @@ export default function DigosAR() {
   }, []);
   const active: Screen = screen === 'details' || screen === 'navigation' || screen === 'model' ? 'explore' : screen === 'quiz' ? 'quest' : screen === 'achievements' ? 'profile' : screen;
   let content: React.ReactNode;
-  if (screen === 'home') content = <HomeScreen go={go} open={open} spots={spots} displayName={profileLoading ? '' : profile?.display_name || 'Explorer'} challengeProgress={challengeProgress} />;
+  if (screen === 'home') content = <HomeScreen go={go} open={open} openMap={openMap} spots={spots} displayName={profileLoading ? '' : profile?.display_name || 'Explorer'} challengeProgress={challengeProgress} />;
   else if (screen === 'explore') content = <ExploreScreen open={open} spots={spots} />;
-  else if (screen === 'details') content = <DetailsScreen spot={spot} go={go} />;
+  else if (screen === 'details') content = <DetailsScreen spot={spot} go={go} openMap={openMapForSpot} />;
   else if (screen === 'ar') content = <ARCameraScreen onBack={() => go(previous === 'ar' ? 'home' : previous)} onTargetScanned={recordTargetScan} onOpenQuest={() => go('quest')} />;
   else if (screen === 'navigation') content = <NavigationScreen spot={spot} go={go} />;
   else if (screen === 'model') content = <ModelScreen spot={spot} go={go} />;
   else if (screen === 'quest') content = <QuestExplorer spots={spots} unlockedSlugs={unlockedQuestSlugs} questUnlocked={dawisQuestUnlocked} userId={user?.id} scanSpot={(selectedSpot) => { setResumeQuestOnReturn(true); openAR(selectedSpot); }} onComplete={handleQuestComplete} openQuiz={(selectedSpot) => { setSpot(selectedSpot); go('quiz'); }} resumeQuest={resumeQuestOnReturn} onResumeQuestConsumed={() => setResumeQuestOnReturn(false)} />;
   else if (screen === 'quiz') content = <QuestScreen go={go} spot={spot} userId={user?.id} onComplete={handleQuestComplete} />;
   else if (screen === 'achievements') content = <AchievementsScreen back={() => go('profile')} profile={profile} stats={stats} gameData={gameData} spots={spots} />;
-  else if (!user) content = <HomeScreen go={go} open={open} spots={spots} displayName="Explorer" challengeProgress={0} />;
+  else if (!user) content = <HomeScreen go={go} open={open} openMap={openMap} spots={spots} displayName="Explorer" challengeProgress={0} />;
   else if (!profile) content = <div className="screen profile-screen" />;
   else content = <ProfileScreen user={user} profile={profile} stats={stats} gameData={gameData} onSignOut={() => void signOut()} onContinueExploring={() => go('explore')} refreshProfile={refreshProfile} signingOut={actionLoading} />;
   const isGloballyLoading = screen !== 'ar' && !bootTimedOut && (spotsLoading || authLoading || profileLoading || transitionLoading || accountLoading || actionLoading);
@@ -796,6 +815,7 @@ export default function DigosAR() {
     <div className={`phone ${screen === 'home' ? 'home-phone' : ''} ${screen === 'ar' ? 'ar-phone' : ''} ${usesDarkShell ? 'dark-phone' : ''} ${isGloballyLoading ? 'is-loading' : ''}`}>
       {screen !== 'ar' && <div className={`status-bar ${['home','navigation'].includes(screen) ? 'light' : ''}`}><span>9:41</span><div><i /><i /><b /></div></div>}
       <div className="app-content">{content}</div>
+      <ExploreMapDialog open={exploreMapOpen} onOpenChange={setExploreMapOpen} destination={mapDestination} setDestination={setMapDestination} />
       {screen !== 'ar' && screen !== 'details' && <BottomNav active={active} go={go} />}
       {authToast && <output className="auth-required-toast">{authToast}</output>}
       {achievementToast && <button
