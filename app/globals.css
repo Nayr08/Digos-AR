@@ -1582,21 +1582,17 @@ html,body{min-height:100%;background:#071a12}body{overflow-x:hidden}.site-shell{
 .map-destination-option[data-selected]{color:#173a2e;font-weight:800}
 .map-destination-option[data-selected][data-highlighted]{background:#e7f4d5}
 
-/* Editorial heritage story cards on tourist details. */
-.info-sheet .story{position:relative;margin-top:15px;padding:15px 14px 14px;overflow:hidden;border:1px solid #dce8cc;border-radius:19px;background:linear-gradient(135deg,#eef6df 0%,#fbfaf2 75%);box-shadow:0 7px 18px rgba(32,78,49,.06)}
-.info-sheet .story:before{content:'';width:112px;height:112px;position:absolute;top:-58px;right:-30px;border-radius:50%;background:rgba(166,230,90,.22);pointer-events:none}
-.story-kicker{position:relative;display:flex;align-items:center;gap:7px}
-.story-kicker>span{width:24px;height:24px;display:grid;place-items:center;border-radius:8px;color:#16845d;background:#fffefa}
-.story-kicker>small{color:#16845d;font-size:9px;font-weight:850;letter-spacing:.13em}
-.info-sheet .story h2{position:relative;margin:8px 0 6px;color:#173a2e;font-size:23px;line-height:1.15}
-.info-sheet .story p{position:relative;color:#52665a;font-size:13px;line-height:1.5}
+/* Clean typographic heritage details on the white tourist-spot sheet. */
+.info-sheet .story{position:relative;margin-top:15px;padding:15px 14px 14px;overflow:hidden;border:1px solid #e3e8df;border-left:3px solid #9bff57;border-radius:17px;background:#fffefa;box-shadow:0 5px 14px rgba(24,64,42,.04)}
+.info-sheet .story:before{display:none}
+.story-kicker{display:flex;align-items:center}
+.story-kicker>small{color:#16845d;font-size:9px;font-weight:850;letter-spacing:.14em}
+.info-sheet .story h2{margin:8px 0 6px;color:#173a2e;font-family:var(--font-geist-sans),sans-serif;font-size:20px;font-weight:750;letter-spacing:-.025em;line-height:1.2}
+.info-sheet .story p{color:#52665a;font-size:13px;line-height:1.5}
 .story-columns{margin-top:10px;gap:9px}
-.story-columns>.story-card{min-width:0;padding:12px;border:1px solid #dfe7d9;border-radius:17px;background:linear-gradient(150deg,#fffefa,#f7f8ef);box-shadow:0 5px 14px rgba(24,64,42,.05)}
-.story-columns>.story-culture-card{border-color:#d7e8df;background:linear-gradient(150deg,#f0f7ef,#fffefa)}
-.story-card-top{display:flex;align-items:center;justify-content:space-between;gap:5px}
-.story-card-icon{width:32px;height:32px;display:grid;place-items:center;flex:0 0 auto;border-radius:11px;color:#16845d;background:#e8f4d7}
-.story-culture-card .story-card-icon{color:#137f67;background:#e0f1e9}
-.story-card-top small{color:#62806d;font-size:7px;font-weight:850;letter-spacing:.1em}
-.story-card h3{margin:9px 0 5px;color:#173a2e;font-size:13px;line-height:1.25}
-.story-columns>.story-card p{color:#52665a;font-size:11.5px;line-height:1.48}
-@media(max-width:360px){.story-columns{grid-template-columns:1fr}.story-columns>.story-card{padding:13px}.story-card h3{margin-top:7px}.story-columns>.story-card p{font-size:12px}}
+.story-columns>.story-card{min-width:0;padding:13px;border:1px solid #e3e8df;border-top:2px solid #b7e97a;border-radius:15px;background:#fff;box-shadow:0 4px 12px rgba(24,64,42,.035)}
+.story-columns>.story-culture-card{border-top-color:#75cba5}
+.story-card-top{display:flex;align-items:center;gap:5px}
+.story-card-top small{color:#16845d;font-size:9px;font-weight:850;letter-spacing:.11em;line-height:1.3}
+.story-columns>.story-card p{margin-top:8px;color:#52665a;font-size:12px;line-height:1.52}
+@media(max-width:360px){.story-columns{grid-template-columns:1fr}.story-columns>.story-card{padding:13px}.story-columns>.story-card p{font-size:12px}}
