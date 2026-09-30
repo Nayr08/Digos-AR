@@ -746,35 +746,34 @@ html,body{min-height:100%;background:#071a12}body{overflow-x:hidden}.site-shell{
 
 /* Compact screen-space presentation for the real Dawis GLB. */
 .ar-scanner-frame.is-detected{opacity:.2;transform:scale(.94);transition:opacity 240ms ease,transform 240ms ease}
-.ar-model-status{position:absolute;z-index:5;left:50%;bottom:calc(232px + env(safe-area-inset-bottom));transform:translateX(-50%);padding:6px 10px;border:1px solid rgba(155,255,87,.2);border-radius:999px;color:#dff4d6;background:rgba(7,26,18,.7);box-shadow:0 6px 16px rgba(0,0,0,.22);font-size:10px;font-weight:750;white-space:nowrap;pointer-events:none}
-.ar-info-layer{width:min(340px,calc(100% - 28px));position:absolute;z-index:5;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:7px;transform:translate(-50%,12px);opacity:0;pointer-events:none;transition:opacity 280ms ease,transform 280ms ease}
-.ar-info-layer.is-visible{transform:translate(-50%,0);opacity:1}
-.ar-info-layer.is-city-map{width:min(380px,calc(100% - 24px));bottom:calc(90px + env(safe-area-inset-bottom))}
-.ar-info-title-card,.ar-info-panel{border:1px solid rgba(255,255,255,.18);border-radius:15px;color:#f5f7f3;background:rgba(7,26,18,.82);box-shadow:0 12px 28px rgba(0,0,0,.28);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);pointer-events:auto}
-.ar-info-title-card{padding:11px 13px 10px}
-.ar-info-title-card small{display:block;color:#9bff57;font-size:8px;font-weight:900;letter-spacing:.13em}
-.ar-info-title-card strong{display:block;margin-top:4px;font-family:Georgia,serif;font-size:17px;font-weight:500}
-.ar-info-title-card span{display:block;margin-top:3px;color:#b7c5ba;font-size:10px;line-height:1.3}
-.ar-info-panel{padding:8px 10px 10px}
-.ar-info-tabs{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none}
-.ar-info-tabs::-webkit-scrollbar{display:none}
-.ar-info-tabs button{height:27px;flex:1 0 auto;padding:0 9px;border:1px solid rgba(255,255,255,.13);border-radius:999px;color:#b7c5ba;background:rgba(255,255,255,.06);font-size:9px;font-weight:800;cursor:pointer}
-.ar-info-tabs button.active{border-color:rgba(155,255,87,.5);color:#071a12;background:#9bff57}
-.ar-info-detail{padding:9px 2px 0}
-.ar-info-detail strong{display:block;font-size:11px}
-.ar-info-detail p{margin:3px 0 0;color:#c1cdc4;font-size:10px;line-height:1.42}
-.ar-city-map-panel{padding:9px 10px 10px}
+.ar-info-layer{box-sizing:border-box;width:min(380px,calc(100% - 28px));max-height:min(44dvh,360px);position:absolute;z-index:5;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px;padding:15px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;touch-action:pan-y;transform:translate(-50%,12px);opacity:0;pointer-events:none;border:1px solid rgba(22,132,93,.3);border-top:3px solid #9bff57;border-radius:22px;color:#173a2e;background:linear-gradient(145deg,#fffef9,#f0f6e9);box-shadow:0 15px 38px rgba(0,0,0,.32);transition:opacity 280ms ease,transform 280ms ease}
+.ar-info-layer::-webkit-scrollbar{display:none}
+.ar-info-layer.is-visible{transform:translate(-50%,0);opacity:1;pointer-events:auto}
+.ar-info-layer.is-city-map{width:min(390px,calc(100% - 24px));bottom:calc(92px + env(safe-area-inset-bottom))}
+.ar-info-title-card,.ar-info-panel{border:0;border-radius:0;color:#173a2e;background:transparent;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;pointer-events:auto}
+.ar-info-title-card{padding:0}
+.ar-info-title-card small{display:block;color:#16845d;font-size:9px;font-weight:900;letter-spacing:.13em}
+.ar-info-title-card strong{display:block;margin-top:5px;font-family:Georgia,serif;font-size:22px;font-weight:600;line-height:1.16;overflow-wrap:anywhere}
+.ar-info-title-card span{display:block;margin-top:5px;color:#566c60;font-size:12px;line-height:1.45}
+.ar-info-panel{padding:0}
+.ar-info-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;overflow:visible}
+.ar-info-tabs button{height:36px;min-width:0;padding:0 6px;border:1px solid #d6e3d5;border-radius:12px;color:#315646;background:#fffefa;font-size:10px;font-weight:800;white-space:nowrap;cursor:pointer}
+.ar-info-tabs button.active{border-color:#9bff57;color:#071a12;background:#9bff57}
+.ar-info-detail{margin-top:12px;padding:11px 1px 0;border-top:1px solid #dbe7d7}
+.ar-info-detail strong{display:block;font-size:15px;line-height:1.3}
+.ar-info-detail p{margin:5px 0 0;color:#52665a;font-size:12px;line-height:1.5}
+.ar-city-map-panel{padding:0}
 .ar-city-map-stops{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
-.ar-city-map-stops button{min-width:0;height:32px;padding:0 9px;display:flex;align-items:center;gap:7px;border:1px solid rgba(255,255,255,.13);border-radius:10px;color:#e8eee8;background:rgba(255,255,255,.06);font-size:9px;font-weight:800;text-align:left;white-space:nowrap;cursor:pointer;transition:background 180ms ease,border-color 180ms ease,transform 180ms ease}
+.ar-city-map-stops button{min-width:0;height:36px;padding:0 9px;display:flex;align-items:center;gap:7px;border:1px solid #d6e3d5;border-radius:10px;color:#315646;background:#fffefa;font-size:10px;font-weight:800;text-align:left;white-space:nowrap;cursor:pointer;transition:background 180ms ease,border-color 180ms ease,transform 180ms ease}
 .ar-city-map-stops button:hover{transform:translateY(-1px);border-color:rgba(155,255,87,.48);background:rgba(155,255,87,.12)}
 .ar-city-map-stops button:disabled{opacity:.55;cursor:wait;transform:none}
-.ar-city-map-stops button:disabled:hover{border-color:rgba(255,255,255,.13);background:rgba(255,255,255,.06)}
-.ar-city-map-stops button.active{border-color:rgba(155,255,87,.6);color:#071a12;background:#9bff57}
-.ar-city-map-stops button>span{width:20px;height:20px;flex:0 0 20px;display:grid;place-items:center;border-radius:7px;color:#9bff57;background:rgba(155,255,87,.12);font-size:8px;font-weight:900}
+.ar-city-map-stops button:disabled:hover{border-color:#d6e3d5;background:#fffefa}
+.ar-city-map-stops button.active{border-color:#9bff57;color:#071a12;background:#9bff57}
+.ar-city-map-stops button>span{width:20px;height:20px;flex:0 0 20px;display:grid;place-items:center;border-radius:7px;color:#16845d;background:#e7f4d6;font-size:8px;font-weight:900}
 .ar-city-map-stops button.active>span{color:#f4f1df;background:#0b3328}
 .ar-placement-actions{pointer-events:auto}
 .ar-state-searching .ar-info-layer,.ar-state-scanning_another .ar-info-layer{display:none}
-@media(max-width:350px){.ar-info-layer{width:calc(100% - 22px);bottom:calc(88px + env(safe-area-inset-bottom))}.ar-info-title-card strong{font-size:16px}.ar-model-status{bottom:calc(226px + env(safe-area-inset-bottom))}}
+@media(max-width:350px){.ar-info-layer{width:calc(100% - 22px);max-height:min(46dvh,340px);bottom:calc(88px + env(safe-area-inset-bottom));padding:13px;border-radius:20px}.ar-info-title-card strong{font-size:20px}.ar-info-tabs{gap:4px}.ar-info-tabs button{height:34px;padding:0 4px;font-size:9px}}
 @media(prefers-reduced-motion:reduce){.ar-scanner-frame.is-detected,.ar-info-layer{transition:none}}
 
 /* Interactive Dawis quest route */
