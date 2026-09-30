@@ -1633,3 +1633,13 @@ html,body{min-height:100%;background:#071a12}body{overflow-x:hidden}.site-shell{
 @keyframes digosar-logo-orbit-wrap{0%{opacity:0;transform:scale(.78)}25%{opacity:.8}100%{opacity:0;transform:scale(1.14)}}
 @media(prefers-reduced-motion:reduce){.app-startup-logo-wrap .app-startup-orbit{animation:none!important}}
 .phone:has(>.app-startup-intro)>.bottom-nav{display:none}
+
+/* iOS reports a Home Screen app's actual screen canvas separately from Safari's CSS viewport. */
+@media(max-width:820px){
+  html.is-ios-home-screen-app,html.is-ios-home-screen-app body{width:100%;height:var(--ios-home-screen-height);min-height:var(--ios-home-screen-height);overflow:hidden}
+  html.is-ios-home-screen-app .site-shell{display:block;width:100%;height:var(--ios-home-screen-height);min-height:var(--ios-home-screen-height);padding:0;overflow:hidden}
+  html.is-ios-home-screen-app .phone{height:var(--ios-home-screen-height);min-height:var(--ios-home-screen-height);border-radius:0}
+  html.is-ios-home-screen-app .app-content{height:100%;min-height:0;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
+  html.is-ios-home-screen-app .phone.dark-phone>.bottom-nav{position:absolute;left:0;right:0;bottom:0;z-index:2147483647;transform:none!important;will-change:auto;transition:none;pointer-events:auto}
+  html.is-ios-home-screen-app .dawis-map-dialog{height:var(--ios-home-screen-height);max-height:var(--ios-home-screen-height)}
+}

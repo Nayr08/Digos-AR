@@ -490,6 +490,37 @@ export default function DigosAR() {
   const knownEarnedBadgeIdsRef = useRef<Set<string>>(new Set());
   const achievementToastPointerRef = useRef<{ x: number; y: number } | null>(null);
   const achievementToastSwipedRef = useRef(false);
+  useEffect(() => {
+    const root = document.documentElement;
+    const displayMode = window.matchMedia('(display-mode: standalone)');
+    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const safariStandalone = (navigator as Navigator & { standalone?: boolean }).standalone === true;
+
+    const syncStandaloneViewport = () => {
+      const isIOSHomeScreenApp = isIOS && (displayMode.matches || safariStandalone);
+      root.classList.toggle('is-ios-home-screen-app', isIOSHomeScreenApp);
+      if (!isIOSHomeScreenApp) {
+        root.style.removeProperty('--ios-home-screen-height');
+        return;
+      }
+
+      // screen.height is reported in CSS pixels and includes the full Home Screen app canvas.
+      const height = window.screen.height || window.innerHeight;
+      root.style.setProperty('--ios-home-screen-height', `${Math.round(height)}px`);
+    };
+
+    syncStandaloneViewport();
+    window.addEventListener('resize', syncStandaloneViewport);
+    window.addEventListener('orientationchange', syncStandaloneViewport);
+    displayMode.addEventListener('change', syncStandaloneViewport);
+    return () => {
+      window.removeEventListener('resize', syncStandaloneViewport);
+      window.removeEventListener('orientationchange', syncStandaloneViewport);
+      displayMode.removeEventListener('change', syncStandaloneViewport);
+      root.classList.remove('is-ios-home-screen-app');
+      root.style.removeProperty('--ios-home-screen-height');
+    };
+  }, []);
   const markBoot = useCallback((stage: string) => {
     if (!import.meta.env.DEV) return;
     console.info(`[DigosAR Boot] ${stage}`);
