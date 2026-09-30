@@ -1,10 +1,11 @@
-const CACHE_NAME = 'digosar-shell-v3';
+const CACHE_NAME = 'digosar-shell-v4';
 const APP_SHELL = [
   '/',
   '/manifest.webmanifest',
   '/digosar-icon-logo-192.png',
   '/digosar-icon-logo-512.png',
   '/digosar-icon-logo-180.png',
+  '/launch-screen-iphone17.png',
   '/favicon.svg',
 ];
 

@@ -54,6 +54,11 @@ export default function RootLayout({
       <head>
         <link rel="preload" as="image" href="/digosar-icon-logo.webp" />
         <link rel="preload" as="image" href="/mascot/mascot-blink.webp" />
+        <link
+          rel="apple-touch-startup-image"
+          href="/launch-screen-iphone17.png"
+          media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${montserrat.variable} antialiased`}
