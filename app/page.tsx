@@ -22,6 +22,7 @@ import {
 } from '@/lib/digosar-data';
 import { LoadingSkeleton } from '@/components/loading-skeleton';
 import { ARCameraScreen } from '@/components/ar-camera-screen';
+import { AppStartupIntro } from '@/components/app-startup-intro';
 import { ChallengeCard, type Challenge } from '@/components/challenge-card';
 import { DawisModelViewer } from '@/components/dawis-model-viewer';
 import { MascotGuide } from '@/components/mascot-guide';
@@ -453,7 +454,7 @@ function ProfileScreen({ user, profile, stats, gameData, onSignOut, onContinueEx
 }
 
 function BottomNav({ active, go }: { active: Screen; go: (s: Screen) => void }) {
-  return <nav className={`bottom-nav ${active === 'home' ? 'home-glass-nav' : ''}`} aria-label="Main navigation">{nav.map(({ screen, label, icon: Icon }) => <button key={screen} aria-label={label} className={`${screen === 'ar' ? 'ar-nav' : ''} ${active === screen ? 'active' : ''}`} onClick={() => go(screen)}>{screen === 'ar' ? <span className="ar-nav-mark"><Scan className="ar-nav-scan" size={35} strokeWidth={1.8} /><Cube className="ar-nav-cube" size={19} strokeWidth={1.8} /></span> : <><span><Icon size={20} /></span><small>{label}</small></>}</button>)}</nav>;
+  return <nav className={`bottom-nav ${active === 'home' ? 'home-glass-nav' : ''}`} aria-label="Main navigation">{nav.map(({ screen, label, icon: Icon }) => <button key={screen} type="button" aria-label={label} aria-current={active === screen ? 'page' : undefined} className={`${screen === 'ar' ? 'ar-nav' : ''} ${active === screen ? 'active' : ''}`} onClick={() => go(screen)}>{screen === 'ar' ? <span className="ar-nav-mark"><Scan className="ar-nav-scan" size={35} strokeWidth={1.8} /><Cube className="ar-nav-cube" size={19} strokeWidth={1.8} /></span> : <><span><Icon size={20} /></span><small>{label}</small></>}</button>)}</nav>;
 }
 
 export default function DigosAR() {
@@ -471,14 +472,13 @@ export default function DigosAR() {
   const [challengeProgress, setChallengeProgress] = useState(0);
   const [spotsLoading, setSpotsLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
-  const [transitionLoading, setTransitionLoading] = useState(false);
-  const [accountLoading, setAccountLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [authToast, setAuthToast] = useState('');
   const [bootStage, setBootStage] = useState('app shell');
   const [bootTimedOut, setBootTimedOut] = useState(false);
   const bootTimeoutRef = useRef<number | null>(null);
   const authRedirectTimerRef = useRef<number | null>(null);
+  const pendingNavigationRef = useRef<{ screen: Screen; from: Screen } | null>(null);
   const [unlockedQuestSlugs, setUnlockedQuestSlugs] = useState<string[]>([]);
   const [dawisQuestUnlocked, setDawisQuestUnlocked] = useState(false);
   const dawisQuestUnlockedRef = useRef(false);
@@ -504,18 +504,24 @@ export default function DigosAR() {
     return () => { if (bootTimeoutRef.current !== null) window.clearTimeout(bootTimeoutRef.current); };
   }, [markBoot]);
   useEffect(() => {
-    if (spotsLoading || authLoading || profileLoading || accountLoading) return;
+    if (spotsLoading || authLoading) return;
     if (bootTimeoutRef.current !== null) window.clearTimeout(bootTimeoutRef.current);
     setBootTimedOut(false);
     markBoot('UI rendered');
-  }, [spotsLoading, authLoading, profileLoading, accountLoading, markBoot]);
+  }, [spotsLoading, authLoading, markBoot]);
   const refreshProfile = useCallback(async (showLoading = true) => {
     if (!user) { setProfile(null); setProfileLoading(false); return; }
     if (showLoading) setProfileLoading(true);
-    const { data, error } = await supabase.from('profiles').select('display_name, username, total_xp, level').eq('id', user.id).single();
-    if (!error && data) setProfile(data as ProfileData);
-    else setProfile(null);
-    if (showLoading) setProfileLoading(false);
+    try {
+      const { data, error } = await supabase.from('profiles').select('display_name, username, total_xp, level').eq('id', user.id).single();
+      if (error) throw error;
+      setProfile(data as ProfileData | null);
+    } catch (error) {
+      console.error('[DigosAR Profile] Profile fetch failed', error);
+      setProfile(null);
+    } finally {
+      if (showLoading) setProfileLoading(false);
+    }
   }, [user]);
   const refreshGameData = useCallback(async () => {
     if (!user) { setGameData(null); knownEarnedBadgeIdsRef.current = new Set(); return null; }
@@ -552,21 +558,23 @@ export default function DigosAR() {
     achievementToastTimerRef.current = null;
     setAchievementToast(null);
   }, []);
-  const transitionTo = (next: Screen) => {
-    setTransitionLoading(true);
-    window.setTimeout(() => {
-      setPrevious(screen);
-      setScreen(next);
-      document.querySelector('.app-content')?.scrollTo({ top: 0, behavior: 'smooth' });
-      setTransitionLoading(false);
-    }, 650);
-  };
+  const transitionTo = useCallback((next: Screen) => {
+    setPrevious(screen);
+    setScreen(next);
+    document.querySelector('.app-content')?.scrollTo(0, 0);
+  }, [screen]);
   const go = (next: Screen) => {
+    if (authLoading) {
+      pendingNavigationRef.current = { screen: next, from: screen };
+      setAuthToast('Checking your session…');
+      return;
+    }
+    pendingNavigationRef.current = null;
     if (protectedScreens.has(next) && !user) {
       if (authRedirectTimerRef.current !== null) return;
       setAuthToast('You need to log in first.');
       authRedirectTimerRef.current = window.setTimeout(() => {
-        setTransitionLoading(true);
+        authRedirectTimerRef.current = null;
         window.location.assign(`/login?next=${next}`);
       }, 850);
       return;
@@ -743,14 +751,19 @@ export default function DigosAR() {
       setUser(currentUser);
       const requestedView = new URLSearchParams(window.location.search).get('view') as Screen | null;
       const requested = requestedView && linkableScreens.has(requestedView) ? requestedView : null;
+      const pendingNavigation = pendingNavigationRef.current;
+      pendingNavigationRef.current = null;
+      setAuthToast('');
+      if (pendingNavigation) setPrevious(pendingNavigation.from);
+      const initialScreen = pendingNavigation?.screen ?? requested;
       if (currentUser) {
-        setScreen(requested ?? 'home');
-      } else if (requested && !protectedScreens.has(requested)) {
-        setScreen(requested);
+        setScreen(initialScreen ?? 'home');
+      } else if (initialScreen && !protectedScreens.has(initialScreen)) {
+        setScreen(initialScreen);
       } else {
-        window.location.replace(`/login?next=${requested ?? 'home'}`);
+        window.location.replace(`/login?next=${initialScreen ?? 'home'}`);
       }
-    }).catch((error) => { console.error('[DigosAR Boot ERROR] getSession failed', error); }).finally(() => { if (active) { setAuthLoading(false); markBoot('getSession finished'); } });
+    }).catch((error) => { console.error('[DigosAR Boot ERROR] getSession failed', error); pendingNavigationRef.current = null; setAuthToast('Unable to verify your session. Try again shortly.'); }).finally(() => { if (active) { setAuthLoading(false); markBoot('getSession finished'); } });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       if (!session?.user) { setProfile(null); setProfileLoading(false); }
@@ -761,14 +774,12 @@ export default function DigosAR() {
   useEffect(() => {
     // Account state is synchronized from Supabase, the external source of truth.
     // oxlint-disable-next-line react/react-compiler
-    if (!user) { setProfile(null); setStats(null); setGameData(null); setProfileLoading(false); setAccountLoading(false); return; }
+    if (!user) { setProfile(null); setStats(null); setGameData(null); setProfileLoading(false); return; }
     let active = true;
-    // oxlint-disable-next-line react/react-compiler
-    setAccountLoading(true);
     markBoot('profile fetch started');
     void Promise.all([refreshProfile(), refreshGameData(), refreshDashboardStats()]).then(() => {
       if (!active) return;
-    }).catch((error) => { console.error('[DigosAR Boot ERROR] Account fetch failed', error); }).finally(() => { if (active) { setAccountLoading(false); markBoot('profile fetch finished'); } });
+    }).catch((error) => { console.error('[DigosAR Boot ERROR] Account fetch failed', error); }).finally(() => { if (active) markBoot('profile fetch finished'); });
     return () => { active = false; };
   }, [user, refreshDashboardStats, refreshGameData, refreshProfile, markBoot]);
 
@@ -796,7 +807,7 @@ export default function DigosAR() {
   }, []);
   const active: Screen = screen === 'details' || screen === 'navigation' || screen === 'model' ? 'explore' : screen === 'quiz' ? 'quest' : screen === 'achievements' ? 'profile' : screen;
   let content: React.ReactNode;
-  if (screen === 'home') content = <HomeScreen go={go} open={open} openMap={openMap} spots={spots} displayName={profileLoading ? '' : profile?.display_name || 'Explorer'} challengeProgress={challengeProgress} />;
+  if (screen === 'home') content = <HomeScreen go={go} open={open} openMap={openMap} spots={spots} displayName={profile?.display_name || 'Explorer'} challengeProgress={challengeProgress} />;
   else if (screen === 'explore') content = <ExploreScreen open={open} spots={spots} />;
   else if (screen === 'details') content = <DetailsScreen spot={spot} go={go} openMap={openMapForSpot} />;
   else if (screen === 'ar') content = <ARCameraScreen onBack={() => go(previous === 'ar' ? 'home' : previous)} onTargetScanned={recordTargetScan} onOpenQuest={() => go('quest')} />;
@@ -806,14 +817,15 @@ export default function DigosAR() {
   else if (screen === 'quiz') content = <QuestScreen go={go} spot={spot} userId={user?.id} onComplete={handleQuestComplete} />;
   else if (screen === 'achievements') content = <AchievementsScreen back={() => go('profile')} profile={profile} stats={stats} gameData={gameData} spots={spots} />;
   else if (!user) content = <HomeScreen go={go} open={open} openMap={openMap} spots={spots} displayName="Explorer" challengeProgress={0} />;
-  else if (!profile) content = <div className="screen profile-screen" />;
+  else if (!profile) content = <div className="screen profile-screen"><header className="light-header profile-header"><span className="header-spacer" aria-hidden="true" /><h1>Profile</h1><span className="header-spacer" aria-hidden="true" /></header><section className="profile-load-state" aria-live="polite"><strong>{profileLoading ? 'Loading your profile…' : 'Profile is unavailable right now'}</strong><span>{profileLoading ? 'You can keep exploring while this finishes.' : 'Your other screens are still available.'}</span>{!profileLoading && <button type="button" onClick={() => void refreshProfile()}>Try again</button>}</section></div>;
   else content = <ProfileScreen user={user} profile={profile} stats={stats} gameData={gameData} onSignOut={() => void signOut()} onContinueExploring={() => go('explore')} refreshProfile={refreshProfile} signingOut={actionLoading} />;
-  const isGloballyLoading = screen !== 'ar' && !bootTimedOut && (spotsLoading || authLoading || profileLoading || transitionLoading || accountLoading || actionLoading);
-  const loadingLabel = transitionLoading ? 'Opening…' : accountLoading ? 'Loading your account…' : actionLoading ? 'Please wait…' : 'Preparing your DigosAR experience…';
+  const isGloballyLoading = screen !== 'ar' && !bootTimedOut && actionLoading;
+  const loadingLabel = 'Please wait…';
   const usesDarkShell = ['home', 'explore', 'quest', 'quiz', 'achievements', 'profile'].includes(screen);
   return <main className="site-shell">
     <div className="desktop-brand"><Logo inverse /><h1>A new layer<br />of Digos.</h1><p>Immersive tourism. Local stories.<br />One AR-ready companion.</p><span>WEB APP EXPERIENCE</span></div>
     <div className={`phone ${screen === 'home' ? 'home-phone' : ''} ${screen === 'ar' ? 'ar-phone' : ''} ${usesDarkShell ? 'dark-phone' : ''} ${isGloballyLoading ? 'is-loading' : ''}`}>
+      <AppStartupIntro />
       {screen !== 'ar' && <div className={`status-bar ${['home','navigation'].includes(screen) ? 'light' : ''}`}><span>9:41</span><div><i /><i /><b /></div></div>}
       <div className="app-content">{content}</div>
       <ExploreMapDialog open={exploreMapOpen} onOpenChange={setExploreMapOpen} destination={mapDestination} setDestination={setMapDestination} />
@@ -852,7 +864,7 @@ export default function DigosAR() {
       {questUnlockToast && !achievementToast && <output className="auth-required-toast quest-unlock-toast">{questUnlockToast}</output>}
       {isGloballyLoading && <div className="global-loading"><LoadingSkeleton variant="app" label={loadingLabel} /></div>}
       {import.meta.env.DEV && <output className="boot-debug-overlay">BOOT: {bootStage}{bootTimedOut ? ' · timeout' : ''}</output>}
-      {bootTimedOut && <div className="boot-timeout"><strong>DigosAR is taking longer than expected to load.</strong><button type="button" onClick={() => window.location.reload()}>Retry</button></div>}
+      {bootTimedOut && <aside className="boot-timeout" aria-label="Loading notice" aria-live="polite"><strong>DigosAR is taking longer than expected to load.</strong><button type="button" onClick={() => window.location.reload()}>Retry</button></aside>}
     </div>
     <div className="desktop-index"><span>01</span><i /><span>FOREST GLASS</span></div>
   </main>;

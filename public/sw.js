@@ -1,8 +1,10 @@
-const CACHE_NAME = 'digosar-shell-v1';
+const CACHE_NAME = 'digosar-shell-v2';
 const APP_SHELL = [
   '/',
   '/manifest.webmanifest',
-  '/digosar-icon.webp',
+  '/digosar-icon-logo-192.png',
+  '/digosar-icon-logo-512.png',
+  '/digosar-icon-logo-180.png',
   '/favicon.svg',
 ];
 

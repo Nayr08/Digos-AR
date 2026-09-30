@@ -31,8 +31,11 @@ export const metadata: Metadata = {
     title: 'DigosAR',
   },
   icons: {
-    icon: '/digosar-icon.webp',
-    apple: '/digosar-icon.webp',
+    icon: [
+      { url: '/digosar-icon-logo-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/digosar-icon-logo-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/digosar-icon-logo-180.png', sizes: '180x180', type: 'image/png' }],
   },
 };
 
@@ -48,7 +51,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head><link rel="preload" as="image" href="/mascot/mascot-blink.webp" /></head>
+      <head>
+        <link rel="preload" as="image" href="/digosar-icon-logo.webp" />
+        <link rel="preload" as="image" href="/mascot/mascot-blink.webp" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${montserrat.variable} antialiased`}
       >

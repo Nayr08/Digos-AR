@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Camera } from 'lucide-react';
+import { ArrowLeft, Camera, ChevronRight } from 'lucide-react';
 import * as THREE from 'three';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -226,6 +226,9 @@ async function buildDigosMapScene(gltfLoader: GLTFLoader) {
     const imageX = (stop.x - 0.5) * MAP_BOARD_WIDTH;
     const imageY = (0.5 - stop.y) * MAP_BOARD_HEIGHT;
     landmark.position.set(imageX, imageY, 0);
+    // Turn the long Dawis wharf axis across the map so it reads horizontally
+    // instead of pointing toward the top or bottom of the miniature.
+    if (stop.id === 'dawis' && rawSize.y > rawSize.x) landmark.rotation.z = Math.PI / 2;
     model.position.set(-center.x, -center.y, boardTop + 0.004 - fittedBounds.min.z);
     model.traverse((child) => {
       const mesh = child as THREE.Mesh;
@@ -369,6 +372,7 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
   const latestAnchorMatrixRef = useRef<THREE.Matrix4 | null>(null);
   const lockedAnchorMatrixRef = useRef<THREE.Matrix4 | null>(null);
   const pointerDragRef = useRef<{ pointerId: number | null; x: number; y: number }>({ pointerId: null, x: 0, y: 0 });
+  const mapInfoSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const pointerPointsRef = useRef(new Map<number, { x: number; y: number }>());
   const pinchDistanceRef = useRef<number | null>(null);
   const modelBaseScaleRef = useRef(1);
@@ -384,6 +388,7 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
   const [activeInfoSections, setActiveInfoSections] = useState(DAWIS_TARGET_CONFIGS[0].infoSections);
   const [activeTargetIsReward, setActiveTargetIsReward] = useState(false);
   const [infoVisible, setInfoVisible] = useState(false);
+  const [isCityMapInfoCollapsed, setIsCityMapInfoCollapsed] = useState(false);
   const [isModelLoading, setIsModelLoading] = useState(false);
   const [modelLoadError, setModelLoadError] = useState(false);
   const [selectedMapStopId, setSelectedMapStopId] = useState('eco-park');
@@ -486,6 +491,7 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
     setIsDawisDetected(false);
     setPresentation('SEARCHING');
     setInfoVisible(false);
+    setIsCityMapInfoCollapsed(false);
     setActiveInfoTab('about');
     setSelectedMapStopId('eco-park');
     focusedMapStopIdRef.current = null;
@@ -867,6 +873,7 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
     focusedMapStopIdRef.current = null;
     setFocusedMapStopId(null);
     setInfoVisible(false);
+    setIsCityMapInfoCollapsed(false);
     setIsDawisDetected(false);
     setIsModelLoading(false);
     setModelLoadError(false);
@@ -890,10 +897,29 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
       <header className="ar-camera-controls"><button type="button" onClick={exitCamera} aria-label="Exit AR camera"><ArrowLeft size={20} /></button><div><small>AR PREVIEW</small><strong>{isSearching ? 'Scanning...' : activeTargetTitle}</strong></div></header>
        <section className="ar-scanner-stage" aria-label="DigosAR image-target scanner preview"><div className={`ar-scanner-frame ${isSearching ? '' : 'is-detected'}`} aria-hidden="true"><i className="corner top-left" /><i className="corner top-right" /><i className="corner bottom-left" /><i className="corner bottom-right" />{isSearching && <><span className="ar-scan-line" /><span className="ar-target-dot dot-one" /><span className="ar-target-dot dot-two" /></>}</div>{isSearching && <div className="ar-scanner-copy"><strong>Point your camera at a DigosAR marker</strong><span>For the four-stop diorama, scan the separate Digos city-map card.</span></div>}</section>
       {!isSearching && <>
-        <section className={`ar-info-layer ${isCityMapTarget ? 'is-city-map' : ''} ${infoVisible ? 'is-visible' : ''}`} aria-label={`${activeTargetTitle} information`}>
-           <div className="ar-info-title-card"><small>{isCityMapTarget ? 'DIGOS CITY · AR MAP' : activeTargetIsReward ? 'REWARD UNLOCKED · DAWIS QUEST' : isDawisEntryTarget ? 'QUEST READY · MARKER FOUND' : 'HERITAGE SITE · DIGOS CITY'}</small><strong>{activeTargetTitle}</strong>{(isModelLoading || modelLoadError || isCityMapTarget || activeTargetIsReward) && <span>{isModelLoading ? `Preparing ${isCityMapTarget ? 'the city diorama' : activeTargetIsReward ? 'your collectible' : 'the mobile model'}…` : modelLoadError ? 'The model could not be loaded. Try scanning again.' : isCityMapTarget ? focusedMapStopId ? `Focused on ${selectedMapStop.label}. Tap it again for the full map; pinch to zoom.` : 'Lay the marker flat. Tap a place to zoom in; drag to rotate and pinch to zoom.' : 'Drag to orbit · pinch to inspect your collectible.'}</span>}</div>
+        <section
+          className={`ar-info-layer ${isCityMapTarget ? 'is-city-map' : ''} ${infoVisible ? 'is-visible' : ''} ${isCityMapTarget && isCityMapInfoCollapsed ? 'is-collapsed' : ''}`}
+          aria-label={`${activeTargetTitle} information`}
+          onTouchStart={(event) => {
+            if (!isCityMapTarget) return;
+            const touch = event.touches.item(0);
+            mapInfoSwipeStartRef.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
+          }}
+          onTouchEnd={(event) => {
+            const start = mapInfoSwipeStartRef.current;
+            const touch = event.changedTouches.item(0);
+            mapInfoSwipeStartRef.current = null;
+            if (!isCityMapTarget || !start || !touch) return;
+            const deltaX = touch.clientX - start.x;
+            const deltaY = touch.clientY - start.y;
+            if (deltaX < -64 && Math.abs(deltaX) > Math.abs(deltaY) * 1.25) setIsCityMapInfoCollapsed(true);
+          }}
+          onTouchCancel={() => { mapInfoSwipeStartRef.current = null; }}
+        >
+           <div className="ar-info-title-card"><small>{isCityMapTarget ? 'DIGOS CITY · AR MAP' : activeTargetIsReward ? 'REWARD UNLOCKED · DAWIS QUEST' : isDawisEntryTarget ? 'QUEST READY · MARKER FOUND' : 'HERITAGE SITE · DIGOS CITY'}</small><strong>{activeTargetTitle}</strong>{(isModelLoading || modelLoadError || isCityMapTarget || activeTargetIsReward) && <span>{isModelLoading ? `Preparing ${isCityMapTarget ? 'the city diorama' : activeTargetIsReward ? 'your collectible' : 'the mobile model'}…` : modelLoadError ? 'The model could not be loaded. Try scanning again.' : isCityMapTarget ? focusedMapStopId ? `Focused on ${selectedMapStop.label}. Tap it again for the full map; pinch to zoom. Swipe left to hide details.` : 'Lay the marker flat. Tap a place to zoom in; drag to rotate and pinch to zoom. Swipe left to hide details.' : 'Drag to orbit · pinch to inspect your collectible.'}</span>}</div>
           {!modelLoadError && (isCityMapTarget ? <div className="ar-info-panel ar-city-map-panel"><nav className="ar-city-map-stops" aria-label="Digos city map locations">{DIGOS_MAP_STOPS.map((stop, index) => <button key={stop.id} type="button" aria-pressed={focusedMapStopId === stop.id} aria-label={focusedMapStopId === stop.id ? `Return to full map from ${stop.label}` : `Zoom to ${stop.label}`} className={focusedMapStopId === stop.id ? 'active' : ''} disabled={presentationState !== 'LOCKED' || isModelLoading || modelLoadError} onClick={() => { setSelectedMapStopId(stop.id); focusMapStop(stop.id); }}><span>{String(index + 1).padStart(2, '0')}</span>{stop.label}</button>)}</nav><div className="ar-info-detail"><strong>{selectedMapStop.title}</strong><p>{selectedMapStop.description}</p></div></div> : <div className="ar-info-panel"><div className="ar-info-tabs" role="tablist" aria-label="Dawis information"><>{(Object.keys(activeInfoSections) as InfoTab[]).map((tab) => <button key={tab} type="button" role="tab" aria-selected={activeInfoTab === tab} className={activeInfoTab === tab ? 'active' : ''} onClick={() => setActiveInfoTab(tab)}>{activeInfoSections[tab].label}</button>)}</></div><div className="ar-info-detail"><strong>{currentInfo.title}</strong><p>{currentInfo.body}</p></div></div>)}
         </section>
+        {isCityMapTarget && presentationState === 'LOCKED' && isCityMapInfoCollapsed && <button type="button" className="ar-info-reopen" aria-label="Show map information" onClick={() => setIsCityMapInfoCollapsed(false)}><ChevronRight size={22} /></button>}
          {presentationState === 'LOCKED' && <div className="ar-placement-actions"><div>{isDawisEntryTarget && onOpenQuest ? <><button type="button" onClick={onOpenQuest}>Open Quest</button><button type="button" className="secondary" onClick={exitCamera}>Close</button></> : activeTargetIsReward && onOpenQuest ? <><button type="button" onClick={onOpenQuest}>Return to Quest</button><button type="button" className="secondary" onClick={scanAnother}>Scan another</button></> : <><button type="button" onClick={scanAnother}>Scan another</button><button type="button" className="secondary" onClick={exitCamera}>Close</button></>}</div></div>}
       </>}
     </> : <output className="ar-camera-state">{cameraState === 'requesting' ? <><span className="camera-start-icon"><Camera size={28} /></span><h1>Starting camera...</h1></> : cameraState === 'denied' ? <><Camera size={36} /><h1>Camera access is required to use DigosAR.</h1><p>Allow camera permission in your browser, then try again.</p><button type="button" onClick={() => void startTracking()}>Try again</button><button className="secondary" type="button" onClick={exitCamera}>Go back</button></> : cameraState === 'secure-context-error' ? <><Camera size={36} /><h1>Camera access requires HTTPS.</h1><p>Open DigosAR using the Vercel HTTPS link to use AR tracking.</p><button type="button" onClick={() => void startTracking()}>Try again</button><button className="secondary" type="button" onClick={exitCamera}>Go back</button></> : cameraState === 'tracking-error' ? <><Camera size={36} /><h1>Unable to start AR tracking.</h1><p>Check your connection and camera permission, then try again.</p><button type="button" onClick={() => void startTracking()}>Try again</button><button className="secondary" type="button" onClick={exitCamera}>Go back</button></> : <><Camera size={36} /><h1>Camera is unavailable on this device.</h1><p>Check that your device has a camera and that no other app is using it.</p><button type="button" onClick={exitCamera}>Go back</button></>}</output>}
