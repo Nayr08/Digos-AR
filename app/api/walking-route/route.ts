@@ -1,4 +1,4 @@
-const defaultRouteEndpoint = 'https://valhalla.openstreetmap.de/route';
+const defaultRouteEndpoint = 'https://valhalla1.openstreetmap.de/route';
 const maxRequestBytes = 8_000;
 
 type RouteLocation = { lat: number; lon: number };
@@ -61,7 +61,10 @@ export async function POST(request: Request) {
   try {
     const upstream = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
       body: JSON.stringify({
         locations: requestBody.locations,
         costing: 'pedestrian',
@@ -75,7 +78,17 @@ export async function POST(request: Request) {
     try {
       result = await upstream.json();
     } catch {
-      return jsonResponse({ error: 'The walking route service returned an invalid response.' }, 502);
+      return jsonResponse({
+        error: upstream.status >= 500
+          ? 'Walking directions are temporarily unavailable. Try again or open Google Maps below.'
+          : 'The walking route service returned an invalid response.',
+      }, upstream.status >= 500 ? 503 : 502);
+    }
+
+    if (upstream.status >= 500) {
+      return jsonResponse({
+        error: 'Walking directions are temporarily unavailable. Try again or open Google Maps below.',
+      }, 503);
     }
 
     return jsonResponse(result, upstream.status);

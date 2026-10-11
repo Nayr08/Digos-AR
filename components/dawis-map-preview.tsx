@@ -70,6 +70,17 @@ function locationErrorMessage(error: GeolocationPositionError) {
   return 'Your location is unavailable right now. Try again when you have a clear GPS signal.';
 }
 
+function distanceBetweenKm(from: Coordinates, to: MapDestination) {
+  const radians = (degrees: number) => degrees * Math.PI / 180;
+  const latitudeDelta = radians(to.latitude - from.latitude);
+  const longitudeDelta = radians(to.longitude - from.longitude);
+  const fromLatitude = radians(from.latitude);
+  const toLatitude = radians(to.latitude);
+  const haversine = Math.sin(latitudeDelta / 2) ** 2
+    + Math.cos(fromLatitude) * Math.cos(toLatitude) * Math.sin(longitudeDelta / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
+
 export function DawisMapPreview({ destination }: { destination: MapDestination }) {
   const initialDestinationRef = useRef(destination);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -217,7 +228,15 @@ export function DawisMapPreview({ destination }: { destination: MapDestination }
     setRouteStatus('locating');
     navigator.geolocation.getCurrentPosition(
       position => {
-        setOrigin({ latitude: position.coords.latitude, longitude: position.coords.longitude });
+        const currentLocation = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+        if (distanceBetweenKm(currentLocation, destination) > 75) {
+          setOrigin(null);
+          setRoute(null);
+          setRouteStatus('error');
+          setRouteError('Your location is too far from this Digos destination for a local walking route. Use Google Maps for directions.');
+          return;
+        }
+        setOrigin(currentLocation);
         setRouteStatus('routing');
       },
       error => {
@@ -227,7 +246,7 @@ export function DawisMapPreview({ destination }: { destination: MapDestination }
       },
       { enableHighAccuracy: true, maximumAge: 30_000, timeout: 15_000 },
     );
-  }, []);
+  }, [destination]);
 
   useEffect(() => {
     if (!origin) return;
