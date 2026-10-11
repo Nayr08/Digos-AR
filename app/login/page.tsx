@@ -100,7 +100,13 @@ export default function LoginPage() {
         email: authEmail,
         password,
         options: {
-          data: { display_name: normalizedUsername, username: normalizedUsername },
+          data: {
+            display_name: normalizedUsername,
+            username: normalizedUsername,
+            // This marker is added only to accounts created after the first-use
+            // guide ships, so existing explorers are not interrupted by it.
+            digosar_first_use_guide: 'v1',
+          },
         },
       });
       if (error || data.user?.identities?.length === 0) {

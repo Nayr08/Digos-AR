@@ -3,14 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog } from '@base-ui/react/dialog';
 import { Select as SelectPrimitive } from '@base-ui/react/select';
-import { DawisNavigation } from '@/components/dawis-navigation';
+import { DawisMapPreview } from '@/components/dawis-map-preview';
+import { SpotMediaPreview } from '@/components/spot-media-preview';
+import { MapWalkthrough } from '@/components/map-walkthrough';
 import { MAP_DESTINATIONS, walkingUrl, type MapDestination } from '@/lib/dawis-navigation';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, CircleHelp } from 'lucide-react';
 import {
-  ArrowLeft, ArrowRight, Award, Bell, Box as Cube, Camera, CheckCircle2, ChevronRight,
+  ArrowLeft, ArrowRight, Award, Bell, BookOpen, Box as Cube, Camera, CheckCircle2, ChevronRight,
   Clock3, Compass, Footprints, Gamepad2, Gift,
   Home, Info, Landmark, Leaf, LockKeyhole, LogOut, Map, MapPin, Medal, TreePine,
-  Bookmark, Navigation, PlayCircle, Scan, Search, Settings, SlidersHorizontal, Sparkles, Star, Trophy, UserRound,
+  Bookmark, Navigation, Scan, Search, Settings, SlidersHorizontal, Sparkles, Star, Trophy, UserRound,
   Eye, EyeOff,
 } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
@@ -23,16 +25,19 @@ import {
 import { LoadingSkeleton } from '@/components/loading-skeleton';
 import { ARCameraScreen } from '@/components/ar-camera-screen';
 import { AppStartupIntro } from '@/components/app-startup-intro';
+import { FirstUseGuide } from '@/components/first-use-guide';
 import { ChallengeCard, type Challenge } from '@/components/challenge-card';
 import { DawisModelViewer } from '@/components/dawis-model-viewer';
+import { RewardModelViewer } from '@/components/reward-model-viewer';
 import { MascotGuide } from '@/components/mascot-guide';
 import { QuestExplorer } from '@/components/quest-explorer';
 import { SpotMascotGuide } from '@/components/spot-mascot-guide';
 import { ProfileHero } from '@/components/profile-hero';
 import { usernameToAuthEmail } from '@/lib/auth';
-import { loadDawisQuestProgress, recordDawisQuestDiscovery } from '@/lib/quest-progress';
+import { loadDawisQuestProgress, loadQuestProgress, recordQuestDiscovery } from '@/lib/quest-progress';
 
 type Screen = 'home' | 'explore' | 'details' | 'ar' | 'quest' | 'quiz' | 'achievements' | 'profile' | 'navigation' | 'model';
+type GuideScreen = 'home' | 'explore' | 'details' | 'ar' | 'quest' | 'profile';
 const mapIdsBySpotSlug: Record<string, string> = {
   'dawis-heritage-wharf': 'dawis',
   'rizal-park': 'rizal-park',
@@ -77,6 +82,15 @@ function BadgeIcon({ badge, size = 20 }: { badge: ProfileBadge; size?: number })
 
 const protectedScreens = new Set<Screen>(['home', 'quest', 'quiz', 'profile', 'achievements', 'navigation']);
 const linkableScreens = new Set<Screen>(['home', 'explore', 'quest', 'profile', 'navigation']);
+
+function shouldShowFirstUseGuide(user: User | null): boolean {
+  if (!user || user.user_metadata?.digosar_first_use_guide !== 'v1' || user.user_metadata?.digosar_first_use_guide_completed === 'v1') return false;
+  try {
+    return window.localStorage.getItem(`digosar:first-use-guide:v1:${user.id}`) !== 'completed';
+  } catch {
+    return true;
+  }
+}
 
 const destinations = fallbackDestinations;
 
@@ -138,7 +152,7 @@ function HomeScreen({ go, open, openMap, spots, displayName, challengeProgress }
       <label className="glass-search"><Search size={19} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search tourist spots..." /><button onClick={() => go('explore')} aria-label="Search"><ChevronRight size={18} /></button></label>
       <section className="home-map-entry" aria-label="View the Digos map"><small><Map size={17} aria-hidden="true" /> VIEW MAP</small><div><span aria-hidden="true"><MapPin size={18} /></span><p><strong>Explore Digos</strong><small>Choose a spot and see directions.</small></p><button type="button" onClick={() => openMap(MAP_DESTINATIONS[0])}>View Map <ChevronRight size={16} /></button></div></section>
       <div className="popular-head"><div><small>CURATED FOR YOU</small><h2>Popular Tourist Spots</h2></div><button onClick={() => go('explore')}>View all</button></div>
-      <div className="popular-rail">{spots.map((spot) => <button className="popular-card" aria-label={`Open ${spot.name}`} key={spot.slug} onClick={() => open(spot)}>
+      <div className="popular-rail">{spots.map((spot) => <button className="popular-card" data-tour={spot.slug === 'dawis-heritage-wharf' ? 'home-spot' : undefined} aria-label={`Open ${spot.name}`} key={spot.slug} onClick={() => open(spot)}>
         <Photo spot={spot}><span className="card-bookmark" aria-hidden="true"><Bookmark size={18} /></span><div className="card-glass"><div><small>{spot.type}</small><h3>{spot.name}</h3><p><MapPin size={13} /> {spot.distance}</p></div><strong><Star size={15} fill="currentColor" /> +{spot.xpReward} XP</strong></div></Photo>
       </button>)}</div>
       <ChallengeCard challenge={{ ...weeklyChallenge, progress: challengeProgress }} onContinue={() => go('explore')} />
@@ -147,36 +161,54 @@ function HomeScreen({ go, open, openMap, spots, displayName, challengeProgress }
 }
 
 function ExploreMapDialog({ open, onOpenChange, destination, setDestination }: { open: boolean; onOpenChange: (open: boolean) => void; destination: MapDestination; setDestination: (destination: MapDestination) => void }) {
-  return <Dialog.Root open={open} onOpenChange={onOpenChange}>
-    <Dialog.Portal>
-      <Dialog.Backdrop className="quest-coming-soon-backdrop" />
-      <Dialog.Popup className="dawis-map-dialog">
-        <header className="dawis-map-header"><div><small>EXPLORE DIGOS</small><Dialog.Title>{destination.name}</Dialog.Title></div><Dialog.Close aria-label="Close map">×</Dialog.Close></header>
-        <div className="dawis-map-dialog-scroll">
-          <Dialog.Description className="dawis-map-intro">Check your location and distance to this destination.</Dialog.Description>
-          <div className="map-destination-picker"><span id="map-destination-label">Destination</span>
-            <SelectPrimitive.Root value={destination.id} onValueChange={value => setDestination(MAP_DESTINATIONS.find(item => item.id === value) ?? MAP_DESTINATIONS[0])}>
-              <SelectPrimitive.Trigger className="map-destination-trigger" aria-labelledby="map-destination-label">
-                <SelectPrimitive.Value>{destination.name}</SelectPrimitive.Value>
-                <SelectPrimitive.Icon><ChevronDown size={18} /></SelectPrimitive.Icon>
-              </SelectPrimitive.Trigger>
-              <SelectPrimitive.Portal>
-                <SelectPrimitive.Positioner className="map-destination-positioner" side="bottom" align="start" sideOffset={6}>
-                  <SelectPrimitive.Popup className="map-destination-popup">
-                    <SelectPrimitive.List>{MAP_DESTINATIONS.map(item => <SelectPrimitive.Item className="map-destination-option" key={item.id} value={item.id}>
-                      <SelectPrimitive.ItemText>{item.name}</SelectPrimitive.ItemText>
-                    </SelectPrimitive.Item>)}</SelectPrimitive.List>
-                  </SelectPrimitive.Popup>
-                </SelectPrimitive.Positioner>
-              </SelectPrimitive.Portal>
-            </SelectPrimitive.Root>
+  const [walkthroughOpen, setWalkthroughOpen] = useState(false);
+  const autoStartedWalkthrough = useRef(false);
+  useEffect(() => {
+    if (!open || autoStartedWalkthrough.current) return;
+    autoStartedWalkthrough.current = true;
+    try {
+      setWalkthroughOpen(window.localStorage.getItem('digosar:map-walkthrough:v1') !== 'completed');
+    } catch {
+      setWalkthroughOpen(true);
+    }
+  }, [open]);
+  const finishWalkthrough = () => {
+    setWalkthroughOpen(false);
+    try { window.localStorage.setItem('digosar:map-walkthrough:v1', 'completed'); } catch { /* The map guide remains available from its help button. */ }
+  };
+  return <>
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Backdrop className="quest-coming-soon-backdrop" />
+        <Dialog.Popup className="dawis-map-dialog">
+          <header className="dawis-map-header"><div><small>EXPLORE DIGOS</small><Dialog.Title>{destination.name}</Dialog.Title></div><div className="dawis-map-header-actions"><button type="button" aria-label="Start map walkthrough" title="Map walkthrough" onClick={() => setWalkthroughOpen(true)}><CircleHelp size={18} /></button><Dialog.Close aria-label="Close map">×</Dialog.Close></div></header>
+          <div className="dawis-map-dialog-scroll">
+            <Dialog.Description className="dawis-map-intro">Choose a destination, see its walking route from your location, or open Google Maps for navigation.</Dialog.Description>
+            <div className="map-destination-picker"><span id="map-destination-label">Destination</span>
+              <SelectPrimitive.Root value={destination.id} onValueChange={value => setDestination(MAP_DESTINATIONS.find(item => item.id === value) ?? MAP_DESTINATIONS[0])}>
+                <SelectPrimitive.Trigger className="map-destination-trigger" data-map-tour="destination" aria-labelledby="map-destination-label">
+                  <SelectPrimitive.Value>{destination.name}</SelectPrimitive.Value>
+                  <SelectPrimitive.Icon><ChevronDown size={18} /></SelectPrimitive.Icon>
+                </SelectPrimitive.Trigger>
+                <SelectPrimitive.Portal>
+                  <SelectPrimitive.Positioner className="map-destination-positioner" side="bottom" align="start" sideOffset={6}>
+                    <SelectPrimitive.Popup className="map-destination-popup">
+                      <SelectPrimitive.List>{MAP_DESTINATIONS.map(item => <SelectPrimitive.Item className="map-destination-option" key={item.id} value={item.id}>
+                        <SelectPrimitive.ItemText>{item.name}</SelectPrimitive.ItemText>
+                      </SelectPrimitive.Item>)}</SelectPrimitive.List>
+                    </SelectPrimitive.Popup>
+                  </SelectPrimitive.Positioner>
+                </SelectPrimitive.Portal>
+              </SelectPrimitive.Root>
+            </div>
+            <DawisMapPreview destination={destination} />
           </div>
-          <DawisNavigation key={destination.id} destination={destination} />
-        </div>
-        <footer className="dawis-map-dialog-footer"><a href={walkingUrl(destination)} target="_blank" rel="noopener noreferrer"><MapPin size={18} />Walking directions in Google Maps<ArrowRight size={18} /></a></footer>
-      </Dialog.Popup>
-    </Dialog.Portal>
-  </Dialog.Root>;
+          <footer className="dawis-map-dialog-footer"><a data-map-tour="walking-directions" href={walkingUrl(destination)} target="_blank" rel="noopener noreferrer"><MapPin size={18} />Walking directions in Google Maps<ArrowRight size={18} /></a></footer>
+          {walkthroughOpen && <MapWalkthrough onFinish={finishWalkthrough} />}
+        </Dialog.Popup>
+      </Dialog.Portal>
+    </Dialog.Root>
+  </>;
 }
 
 function ExploreScreen({ open, spots }: { open: (d: Destination) => void; spots: Destination[] }) {
@@ -223,7 +255,7 @@ function ExploreScreen({ open, spots }: { open: (d: Destination) => void; spots:
       </div>}
     </div>
     <section className="visual-list" aria-label="Tourist destinations">
-      {visible.map(spot => <button className="visual-card explore-place-card" aria-label={`Explore ${spot.name}`} key={spot.slug} onClick={() => open(spot)}>
+      {visible.map(spot => <button className="visual-card explore-place-card" data-tour={spot.slug === 'dawis-heritage-wharf' ? 'explore-spot' : undefined} aria-label={`Explore ${spot.name}`} key={spot.slug} onClick={() => open(spot)}>
         <Photo spot={spot} className="explore-place-photo"><span className="explore-place-tag">{cardCategory(spot)}</span></Photo>
         <span className="explore-place-copy">
           <strong>{cardTitle(spot)}</strong>
@@ -237,19 +269,21 @@ function ExploreScreen({ open, spots }: { open: (d: Destination) => void; spots:
 }
 function DetailsScreen({ spot, go, openMap }: { spot: Destination; go: (s: Screen) => void; openMap: (spot: Destination) => void }) {
   const isDawis = spot.slug === 'dawis-heritage-wharf';
+  const hasQuest = isDawis || spot.slug === 'digos-city-eco-park-arboretum';
+  const hasModel = isDawis || spot.slug === 'digos-city-eco-park-arboretum';
   const [modelComingSoon, setModelComingSoon] = useState(false);
   return <div className="screen detail-screen"><Photo spot={spot} className="detail-hero"><div className="image-shade" /><div className="detail-top"><GlassIcon label="Back" onClick={() => go('explore')}><ArrowLeft size={20} /></GlassIcon></div><div className="detail-image-title"><small>{spot.type} · {spot.distance}</small><h1>{spot.name}</h1></div></Photo>
     <article className="info-sheet"><span className="sheet-handle" aria-hidden="true" /><div className="spot-meta"><p><MapPin size={13} /> {spot.location}</p><span>+100 XP</span></div><h1>{spot.name}</h1><div className="fact-row"><div><Leaf size={17} /><span><small>Category</small><strong>{spot.type}</strong></span></div><div><Clock3 size={17} /><span><small>Best time</small><strong>{spot.best}</strong></span></div><div><Footprints size={17} /><span><small>Distance</small><strong>{spot.distance}</strong></span></div></div>
-      <section className="story"><div className="story-kicker"><small>ABOUT THIS PLACE</small></div><h2>A place worth knowing</h2><p>{spot.about || spot.description}</p></section>
+      <section className="story" data-tour="spot-story"><div className="story-kicker"><small>ABOUT THIS PLACE</small></div><h2>A place worth knowing</h2><p>{spot.about || spot.description}</p></section>
       <section className="story-columns" aria-label="Heritage highlights">
         <article className="story-card story-history-card"><div className="story-card-top"><small>HISTORY</small></div><p>{spot.history}</p></article>
         <article className="story-card story-culture-card"><div className="story-card-top"><small>CULTURAL SIGNIFICANCE</small></div><p>{spot.culture}</p></article>
       </section>
       <section className="visitor-note"><small>VISITOR NOTE</small><p>{spot.visitorTip}</p></section>
-      <div className="media-preview"><Photo spot={spot}><PlayCircle size={34} /><span><small>MULTIMEDIA PREVIEW</small><strong>Watch the local story</strong></span></Photo><button onClick={() => isDawis ? go('model') : setModelComingSoon(true)}><Cube size={18} /> View 3D Model</button></div>
-      <div className={`detail-bottom-actions ${isDawis ? '' : 'is-quest-coming-soon'}`}>
-        {isDawis ? <button onClick={() => go('quest')}><Gamepad2 size={18} /> Quest</button> : <button type="button" disabled aria-label="Quest coming soon"><Gamepad2 size={18} /><span>Quest</span><small>Coming soon</small></button>}
-        <button type="button" onClick={() => openMap(spot)}><Navigation size={18} fill="currentColor" /> Go</button>
+      <div className="media-preview"><SpotMediaPreview spot={spot} /><button onClick={() => hasModel ? go('model') : setModelComingSoon(true)}><Cube size={18} /> View 3D Model</button></div>
+      <div className={`detail-bottom-actions ${hasQuest ? '' : 'is-quest-coming-soon'}`}>
+        {hasQuest ? <button data-tour="spot-quest" onClick={() => go('quest')}><Gamepad2 size={18} /> Quest</button> : <button type="button" disabled aria-label="Quest coming soon"><Gamepad2 size={18} /><span>Quest</span><small>Coming soon</small></button>}
+        <button type="button" data-tour="spot-go" onClick={() => openMap(spot)}><Navigation size={18} fill="currentColor" /> Go</button>
       </div>
     </article><SpotMascotGuide initialMessage="Scroll down for more details about this spot!" />
     <Dialog.Root open={modelComingSoon} onOpenChange={setModelComingSoon}>
@@ -272,6 +306,8 @@ function NavigationScreen({ spot, go }: { spot: Destination; go: (s: Screen) => 
 
 function ModelScreen({ spot, go }: { spot: Destination; go: (s: Screen) => void }) {
   const isDawis = spot.slug === 'dawis-heritage-wharf';
+  const isEcoPark = spot.slug === 'digos-city-eco-park-arboretum';
+  if (isEcoPark) return <div className="screen model-screen"><LightHeader title="3D Preview" showAvatar={false} back onBack={() => go('details')} /><div className="eco-park-model-preview"><RewardModelViewer modelSrc="/ar/models/ecopark.glb" title="Digos City Eco Park and Arboretum" description={spot.about || spot.description} captionLabel="INTERACTIVE 3D PREVIEW" /></div></div>;
   if (!isDawis) return <div className="screen model-screen"><LightHeader title="3D Preview" showAvatar={false} back onBack={() => go('details')} /><section className="model-coming-soon"><div className="model-coming-icon"><Cube size={38} /></div><small>INTERACTIVE MODEL</small><h1>{spot.name}</h1><h2>3D preview coming soon</h2><p>We’re preparing an interactive model for this destination. You can still explore its story, location, and AR preview today.</p><button type="button" onClick={() => go('details')}><ArrowLeft size={17} /> Back to {spot.name}</button></section></div>;
   return <div className="screen model-screen"><LightHeader title="3D Preview" showAvatar={false} back onBack={() => go('details')} /><DawisModelViewer /></div>;
 }
@@ -369,7 +405,7 @@ function AchievementsScreen({ back, profile, stats, gameData, spots }: { back: (
   return <div className="screen achievements-screen"><LightHeader title="Achievements" back onBack={back} /><section className="xp-panel"><div className="award-halo"><Award size={34} /><span>{badgeCount}</span></div><small>DIGOS EXPLORER</small><h1>{xp.toLocaleString()} <span>Total XP</span></h1><div><p><span>Level {level}</span><b>{levelXP} / 500 XP</b></p><Progress value={(levelXP / 500) * 100} /></div></section><section className="badge-section"><header><div><small>COLLECTION</small><h2>Earned badges</h2></div><span>{badgeCount} of {availableBadges.length || '—'}</span></header><div className="badge-grid">{availableBadges.map((badge, index) => <div className={`badge badge-${index % 4} ${badge.earnedAt ? 'is-earned' : 'is-locked'}`} key={badge.id}><div style={badge.earnedAt && badge.color ? { color: badge.color } : undefined}><BadgeIcon badge={badge} size={25} />{!badge.earnedAt && <LockKeyhole size={12} />}</div><strong>{badge.name}</strong><small>{badge.earnedAt ? badge.description : `Unlock at ${badge.xpRequired} XP`}</small></div>)}</div>{!availableBadges.length && <p className="profile-data-note">Your achievement collection will appear after the Supabase seed data is loaded.</p>}</section><section className="next-reward"><span><Gift size={24} /></span><div><small>NEXT REWARD</small><h3>{nextBadge ? nextBadge.name : 'All current rewards collected'}</h3><Progress value={nextBadge ? Math.min(100, (spotCount / Math.max(1, spots.length)) * 100) : 100} /><p><span>{spotCount} spots visited</span><span>{nextBadge ? nextBadge.description : 'You completed the collection'}</span></p></div></section></div>;
 }
 
-function ProfileScreen({ user, profile, stats, gameData, onSignOut, onContinueExploring, refreshProfile, signingOut }: { user: User; profile: ProfileData; stats: DashboardStats | null; gameData: ProfileGameData | null; onSignOut: () => void; onContinueExploring: () => void; refreshProfile: () => Promise<void>; signingOut: boolean }) {
+function ProfileScreen({ user, profile, stats, gameData, onSignOut, onContinueExploring, onReplayGuide, refreshProfile, signingOut }: { user: User; profile: ProfileData; stats: DashboardStats | null; gameData: ProfileGameData | null; onSignOut: () => void; onContinueExploring: () => void; onReplayGuide: () => void; refreshProfile: () => Promise<void>; signingOut: boolean }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [signOutOpen, setSignOutOpen] = useState(false);
   const [draftDisplayName, setDraftDisplayName] = useState(profile.display_name);
@@ -439,14 +475,14 @@ function ProfileScreen({ user, profile, stats, gameData, onSignOut, onContinueEx
   return <div className="screen profile-screen">
     <div className="profile-top"><header className="light-header profile-header"><span className="header-spacer" aria-hidden="true" /><h1>Profile</h1><button type="button" aria-label="Open profile settings" title="Profile settings" onClick={() => { setDraftDisplayName(displayName); setSettingsError(''); setSettingsNotice(''); setSettingsOpen(true); }}><Settings size={19} /></button></header><ProfileHero displayName={displayName} /></div>
     <section className="profile-body">
-      <section className="profile-level-card">
+      <section className="profile-level-card" data-tour="profile-progress">
         <div className="profile-level-heading-row"><div className="profile-level-shield" aria-label={`Level ${level} shield`} style={{ backgroundImage: `url('/profile/level-${level === 1 ? 1 : 2}-shield.webp')` }} /><div className="profile-level-title"><strong>{rank}</strong><span>Level {level}</span></div></div>
         <div className="profile-level-progress"><div><strong>{levelXP} / 500 XP</strong><span>{500 - levelXP} XP to Level {level + 1}</span></div><Progress value={(levelXP / 500) * 100} /></div>
         <div className="profile-level-stats"><div><MapPin size={20} /><p><strong>{stats?.spots_visited ?? 0}</strong><span>Places</span></p></div><div><Footprints size={21} /><p><strong>{stats?.quizzes_completed ?? 0}</strong><span>Challenges</span></p></div><div><Medal size={22} /><p><strong>{earnedBadges.length || stats?.badges_earned || 0}</strong><span>Badge</span></p></div></div>
       </section>
       <section className="profile-section profile-achievements-preview"><header><h2>Explorer Collection</h2><span className="profile-collection-count">{earnedCollectionBadges.length} / {badges.length || 8} earned <ChevronRight size={15} /></span></header><div className="profile-badge-scene"><div className="profile-horizontal-rail profile-badges-carousel">{badges.map((badge) => <article className={`profile-badge ${badge.earnedAt ? 'is-earned' : 'is-locked'}`} key={badge.id}><div className="profile-badge-medallion">{profileBadgeArtwork[badge.slug] ? <div className="profile-badge-artwork" aria-hidden="true" style={{ backgroundImage: `url('${profileBadgeArtwork[badge.slug]}')` }} /> : <span><BadgeIcon badge={badge} size={37} /></span>}</div><strong>{badge.name}</strong><p className="profile-badge-description">{badge.description || 'Explore Digos to earn this badge.'}</p><small className={`profile-badge-state ${badge.earnedAt ? 'is-earned' : 'is-locked'}`}>{badge.earnedAt ? <><CheckCircle2 size={11} />Earned</> : <><LockKeyhole size={10} />Locked</>}</small></article>)}</div></div></section>
       <section className="profile-next-discovery"><div className="profile-next-discovery-copy"><small>YOUR NEXT DISCOVERY</small><strong>{nextBadge ? `Continue toward ${nextBadge.name}` : 'Collection complete'}</strong><span>{nextBadge?.description || 'Explore more Digos landmarks to keep collecting.'}</span></div><button type="button" onClick={onContinueExploring}>Continue exploring <ArrowRight size={16} /></button></section>
-      <nav className="profile-menu profile-account-menu" aria-label="Account options"><button><span><Info size={19} /></span><strong>About DigosAR</strong><ChevronRight size={18} /></button><button className="sign-out-item" onClick={() => setSignOutOpen(true)}><span><LogOut size={19} /></span><strong>Sign out</strong><ChevronRight size={18} /></button></nav>
+      <nav className="profile-menu profile-account-menu" aria-label="Account options"><button type="button" onClick={onReplayGuide}><span><BookOpen size={19} /></span><strong>How to use DigosAR</strong><ChevronRight size={18} /></button><button type="button"><span><Info size={19} /></span><strong>About DigosAR</strong><ChevronRight size={18} /></button><button type="button" className="sign-out-item" onClick={() => setSignOutOpen(true)}><span><LogOut size={19} /></span><strong>Sign out</strong><ChevronRight size={18} /></button></nav>
     </section>
     {settingsOpen && <div className="profile-settings-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSettingsOpen(false); }}><dialog open className="profile-settings-dialog" aria-labelledby="profile-settings-title"><header><div><small>ACCOUNT</small><h2 id="profile-settings-title">Profile settings</h2></div><button type="button" onClick={() => setSettingsOpen(false)} aria-label="Close profile settings">×</button></header><form onSubmit={saveProfileSettings}><label><span>Display name</span><input required maxLength={50} value={draftDisplayName} onChange={(event) => setDraftDisplayName(event.target.value)} /></label><label><span>Username</span><input value={`@${username}`} readOnly aria-describedby="username-readonly-note" /></label><p id="username-readonly-note">Username changes are not available yet.</p><button className="profile-settings-save" disabled={settingsSaving || passwordSaving}>{settingsSaving ? 'Saving…' : 'Save display name'}</button></form><div className="profile-settings-divider" /><form onSubmit={changePassword}><div className="profile-settings-section-title"><small>SECURITY</small><strong>Change password</strong></div>{passwordField('Current password', currentPassword, setCurrentPassword, 'current')}{passwordField('New password', newPassword, setNewPassword, 'next')}{passwordField('Confirm new password', confirmPassword, setConfirmPassword, 'confirm')}{settingsError && <p className="auth-error">{settingsError}</p>}{settingsNotice && <p className="auth-notice">{settingsNotice}</p>}<button className="profile-settings-save" disabled={passwordSaving || settingsSaving}>{passwordSaving ? 'Updating…' : 'Change password'}</button></form></dialog></div>}
     {signOutOpen && <div className="signout-confirm-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !signingOut) setSignOutOpen(false); }}><dialog open className="signout-confirm-dialog" aria-labelledby="signout-confirm-title"><h2 id="signout-confirm-title">Sign out?</h2><p>Are you sure you want to sign out of DigosAR?</p><div><button type="button" disabled={signingOut} onClick={() => setSignOutOpen(false)}>Cancel</button><button type="button" className="confirm" disabled={signingOut} onClick={onSignOut}>{signingOut ? 'Signing out…' : 'Sign out'}</button></div></dialog></div>}
@@ -454,7 +490,7 @@ function ProfileScreen({ user, profile, stats, gameData, onSignOut, onContinueEx
 }
 
 function BottomNav({ active, go }: { active: Screen; go: (s: Screen) => void }) {
-  return <nav className={`bottom-nav ${active === 'home' ? 'home-glass-nav' : ''}`} aria-label="Main navigation">{nav.map(({ screen, label, icon: Icon }) => <button key={screen} type="button" aria-label={label} aria-current={active === screen ? 'page' : undefined} className={`${screen === 'ar' ? 'ar-nav' : ''} ${active === screen ? 'active' : ''}`} onClick={() => go(screen)}>{screen === 'ar' ? <span className="ar-nav-mark"><Scan className="ar-nav-scan" size={35} strokeWidth={1.8} /><Cube className="ar-nav-cube" size={19} strokeWidth={1.8} /></span> : <><span><Icon size={20} /></span><small>{label}</small></>}</button>)}</nav>;
+  return <nav className={`bottom-nav ${active === 'home' ? 'home-glass-nav' : ''}`} aria-label="Main navigation">{nav.map(({ screen, label, icon: Icon }) => <button key={screen} type="button" data-tour={screen === 'explore' ? 'nav-explore' : active === 'home' && screen === 'profile' ? 'nav-profile' : screen === 'ar' ? 'nav-ar' : undefined} aria-label={label} aria-current={active === screen ? 'page' : undefined} className={`${screen === 'ar' ? 'ar-nav' : ''} ${active === screen ? 'active' : ''}`} onClick={() => go(screen)}>{screen === 'ar' ? <span className="ar-nav-mark"><Scan className="ar-nav-scan" size={35} strokeWidth={1.8} /><Cube className="ar-nav-cube" size={19} strokeWidth={1.8} /></span> : <><span><Icon size={20} /></span><small>{label}</small></>}</button>)}</nav>;
 }
 
 export default function DigosAR() {
@@ -465,6 +501,7 @@ export default function DigosAR() {
   const [mapDestination, setMapDestination] = useState<MapDestination>(MAP_DESTINATIONS[0]);
   const [previous, setPrevious] = useState<Screen>('home');
   const [user, setUser] = useState<User | null>(null);
+  const [firstUseGuideOpen, setFirstUseGuideOpen] = useState(false);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -482,7 +519,11 @@ export default function DigosAR() {
   const [unlockedQuestSlugs, setUnlockedQuestSlugs] = useState<string[]>([]);
   const [dawisQuestUnlocked, setDawisQuestUnlocked] = useState(false);
   const dawisQuestUnlockedRef = useRef(false);
+  const [ecoParkQuestUnlocked, setEcoParkQuestUnlocked] = useState(false);
+  const ecoParkQuestUnlockedRef = useRef(false);
   const [resumeQuestOnReturn, setResumeQuestOnReturn] = useState(false);
+  const [resumeEcoQuestOnReturn, setResumeEcoQuestOnReturn] = useState(false);
+  const [arTargetSet, setArTargetSet] = useState<'dawis' | 'eco-park'>('dawis');
   const [questUnlockToast, setQuestUnlockToast] = useState('');
   const questUnlockToastTimerRef = useRef<number | null>(null);
   const [achievementToast, setAchievementToast] = useState<AchievementToast | null>(null);
@@ -490,6 +531,23 @@ export default function DigosAR() {
   const knownEarnedBadgeIdsRef = useRef<Set<string>>(new Set());
   const achievementToastPointerRef = useRef<{ x: number; y: number } | null>(null);
   const achievementToastSwipedRef = useRef(false);
+  const finishFirstUseGuide = useCallback(async () => {
+    setFirstUseGuideOpen(false);
+    setResumeQuestOnReturn(false);
+    if (!user) return;
+    try { window.localStorage.setItem(`digosar:first-use-guide:v1:${user.id}`, 'completed'); } catch { /* Account metadata remains the durable completion marker. */ }
+    const { error } = await supabase.auth.updateUser({ data: {
+      ...user.user_metadata,
+      digosar_first_use_guide_completed: 'v1',
+    } });
+    if (error) console.warn('[DigosAR Guide] Could not sync completion to the account; this device will remember it.', error);
+  }, [user]);
+  const replayFirstUseGuide = useCallback(() => setFirstUseGuideOpen(true), []);
+  const navigateFirstUseGuide = useCallback((next: GuideScreen) => {
+    if (next === 'details') setSpot(destinations.find((destination) => destination.slug === 'dawis-heritage-wharf') ?? destinations[0]);
+    setPrevious('home');
+    setScreen(next);
+  }, []);
   useEffect(() => {
     const root = document.documentElement;
     const displayMode = window.matchMedia('(display-mode: standalone)');
@@ -601,6 +659,7 @@ export default function DigosAR() {
       return;
     }
     pendingNavigationRef.current = null;
+    if (next === 'ar' && screen !== 'quest') setArTargetSet('dawis');
     if (protectedScreens.has(next) && !user) {
       if (authRedirectTimerRef.current !== null) return;
       setAuthToast('You need to log in first.');
@@ -648,25 +707,62 @@ export default function DigosAR() {
     notifyNewAchievements(freshGameData, previouslyEarned);
   }, [notifyNewAchievements, refreshChallengeProgress, refreshDashboardStats, refreshGameData, refreshProfile, user]);
   const recordTargetScan = useCallback((targetId: string) => {
-    const locationTargets = new Set(['dawis', 'old-dawis', 'terminal-platform', 'mooring-bollards', 'support-piles', 'shoreline-rocks']);
+    const isEcoTarget = arTargetSet === 'eco-park';
+    const ecoDiscoveryIds = new Set(['eco-trail-gateway', 'eco-lake-guardian', 'eco-heritage-tree', 'eco-barling-wrecks']);
+    const locationTargets = isEcoTarget
+      ? new Set([...ecoDiscoveryIds, 'eco-park'])
+      : new Set(['dawis', 'old-dawis', 'terminal-platform', 'mooring-bollards', 'support-piles', 'shoreline-rocks']);
     if (!locationTargets.has(targetId)) return;
     const discoveryIds = new Set(['terminal-platform', 'mooring-bollards', 'support-piles', 'shoreline-rocks']);
-    if (discoveryIds.has(targetId) && !dawisQuestUnlockedRef.current) {
+    if (!isEcoTarget && discoveryIds.has(targetId) && !dawisQuestUnlockedRef.current) {
       setQuestUnlockToast('Scan the main Dawis marker first to unlock the four targets.');
       if (questUnlockToastTimerRef.current !== null) window.clearTimeout(questUnlockToastTimerRef.current);
       questUnlockToastTimerRef.current = window.setTimeout(() => setQuestUnlockToast(''), 4200);
       return;
     }
-    const locationSlug = 'dawis-heritage-wharf';
-    const scannedSpot = spots.find((item) => item.slug === locationSlug);
-    const isDawisEntryTarget = targetId === 'dawis';
-    if (isDawisEntryTarget) {
-      dawisQuestUnlockedRef.current = true;
-      setDawisQuestUnlocked(true);
-      setUnlockedQuestSlugs((current) => Array.from(new Set([...current, locationSlug])));
-      setQuestUnlockToast('Dawis quest unlocked. Your waterfront route is ready.');
+    if (isEcoTarget && ecoDiscoveryIds.has(targetId) && !ecoParkQuestUnlockedRef.current) {
+      setQuestUnlockToast('Scan the Eco Park marker first to unlock the four trail targets.');
       if (questUnlockToastTimerRef.current !== null) window.clearTimeout(questUnlockToastTimerRef.current);
       questUnlockToastTimerRef.current = window.setTimeout(() => setQuestUnlockToast(''), 4200);
+      return;
+    }
+    const locationSlug = isEcoTarget ? 'digos-city-eco-park-arboretum' : 'dawis-heritage-wharf';
+    const scannedSpot = spots.find((item) => item.slug === locationSlug);
+    const isDawisEntryTarget = !isEcoTarget && targetId === 'dawis';
+    const isEcoParkEntryTarget = isEcoTarget && targetId === 'eco-park';
+    const questSlug = isEcoTarget ? 'eco-park-green-quest' : 'dawis-sunrise-stories';
+    const isQuestDiscovery = isEcoTarget ? ecoDiscoveryIds.has(targetId) : discoveryIds.has(targetId);
+    if (isDawisEntryTarget || isEcoParkEntryTarget) {
+      const isEcoEntry = isEcoParkEntryTarget;
+      if (isEcoEntry) {
+        ecoParkQuestUnlockedRef.current = true;
+        setEcoParkQuestUnlocked(true);
+        try { window.localStorage.setItem(`digosar:quest-unlocked:eco-park-green-quest:${user?.id ?? 'guest'}`, 'true'); }
+        catch { /* The recognized marker still unlocks the current session. */ }
+      } else {
+        dawisQuestUnlockedRef.current = true;
+        setDawisQuestUnlocked(true);
+      }
+      setUnlockedQuestSlugs((current) => Array.from(new Set([...current, locationSlug])));
+      setQuestUnlockToast(isEcoEntry ? 'Eco Park quest unlocked. Your green trail is ready.' : 'Dawis quest unlocked. Your waterfront route is ready.');
+      if (questUnlockToastTimerRef.current !== null) window.clearTimeout(questUnlockToastTimerRef.current);
+      questUnlockToastTimerRef.current = window.setTimeout(() => setQuestUnlockToast(''), 4200);
+    }
+    if (isQuestDiscovery) {
+      const storageKey = `digosar:quest-progress:${questSlug}:${user?.id ?? 'guest'}`;
+      try {
+        const saved = window.localStorage.getItem(storageKey);
+        const previous = saved ? JSON.parse(saved) as { discoveries?: unknown; quizCompleted?: unknown; quizScore?: unknown; platformClue?: unknown; completedAt?: unknown } : {};
+        const discoveries = Array.isArray(previous.discoveries) ? previous.discoveries.filter((value): value is string => typeof value === 'string') : [];
+        window.localStorage.setItem(storageKey, JSON.stringify({
+          ...previous,
+          discoveries: Array.from(new Set([...discoveries, targetId])),
+          quizCompleted: previous.quizCompleted === true,
+          quizScore: typeof previous.quizScore === 'number' ? previous.quizScore : 0,
+          platformClue: typeof previous.platformClue === 'string' ? previous.platformClue : null,
+          completedAt: typeof previous.completedAt === 'string' ? previous.completedAt : null,
+        }));
+      } catch { /* A camera discovery still remains available to authenticated users through Supabase. */ }
     }
     if (!user || !scannedSpot?.id) return;
     const scannedSpotId = scannedSpot.id;
@@ -691,10 +787,12 @@ export default function DigosAR() {
       ]);
       if (progressSave.error) console.error('[DigosAR Progress] Visit save failed', progressSave.error);
       if (scanSave.error) console.error('[DigosAR Progress] AR scan save failed', scanSave.error);
-      if (discoveryIds.has(targetId)) {
+      if (isQuestDiscovery) {
         try {
-          const quest = await loadDawisQuestProgress(user.id, scannedSpotId);
-          if (quest) await recordDawisQuestDiscovery(user.id, quest.questId, targetId);
+          const quest = isEcoTarget
+            ? await loadQuestProgress(user.id, scannedSpotId, questSlug)
+            : await loadDawisQuestProgress(user.id, scannedSpotId);
+          if (quest) await recordQuestDiscovery(user.id, quest.questId, targetId);
         } catch (error) {
           console.error('[DigosAR Quest] Discovery save failed', error);
         }
@@ -707,8 +805,9 @@ export default function DigosAR() {
       ]);
       notifyNewAchievements(freshGameData, previouslyEarned);
     })().catch((error) => console.error('[DigosAR Progress] Scan progress refresh failed', error));
-  }, [notifyNewAchievements, refreshChallengeProgress, refreshDashboardStats, refreshGameData, refreshProfile, spots, user]);
-  const openAR = (d: Destination) => {
+  }, [arTargetSet, notifyNewAchievements, refreshChallengeProgress, refreshDashboardStats, refreshGameData, refreshProfile, spots, user]);
+  const openAR = (d: Destination, targetSet: 'dawis' | 'eco-park' = 'dawis') => {
+    setArTargetSet(targetSet);
     if (user && d.id && d.slug !== 'dawis-heritage-wharf') {
       const visitedAt = new Date().toISOString();
       void supabase.from('user_spot_progress').upsert({
@@ -730,6 +829,11 @@ export default function DigosAR() {
       setUnlockedQuestSlugs([]);
       setDawisQuestUnlocked(false);
       dawisQuestUnlockedRef.current = false;
+      let ecoEntryScanned = false;
+      try { ecoEntryScanned = window.localStorage.getItem(`digosar:quest-unlocked:eco-park-green-quest:${user?.id ?? 'guest'}`) === 'true'; }
+      catch { /* Keep the in-memory default when browser storage is unavailable. */ }
+      ecoParkQuestUnlockedRef.current = ecoEntryScanned;
+      setEcoParkQuestUnlocked(ecoEntryScanned);
       return () => { active = false; };
     }
     const loadUnlockedMarkers = async () => {
@@ -748,14 +852,22 @@ export default function DigosAR() {
       }
       const visitedIds = new Set((progressData ?? []).map((row) => row.tourist_spot_id));
       const dawisSpot = spots.find((item) => item.slug === 'dawis-heritage-wharf');
+      const ecoParkSpot = spots.find((item) => item.slug === 'digos-city-eco-park-arboretum');
       const entryScanned = !scanError && (scanData ?? []).some((row) => row.tourist_spot_id === dawisSpot?.id && row.target_id === 'dawis');
+      let locallyScannedEcoEntry = false;
+      try { locallyScannedEcoEntry = window.localStorage.getItem(`digosar:quest-unlocked:eco-park-green-quest:${user.id}`) === 'true'; }
+      catch { /* Supabase scan history remains the durable account record. */ }
+      const ecoEntryScanned = locallyScannedEcoEntry || (!scanError && (scanData ?? []).some((row) => row.tourist_spot_id === ecoParkSpot?.id && row.target_id === 'eco-park'));
       // Keep an optimistic unlock from the current scan if the history insert
       // is still in flight when the Quest screen starts loading.
       dawisQuestUnlockedRef.current = dawisQuestUnlockedRef.current || entryScanned;
       setDawisQuestUnlocked((current) => current || entryScanned);
+      ecoParkQuestUnlockedRef.current = ecoParkQuestUnlockedRef.current || ecoEntryScanned;
+      setEcoParkQuestUnlocked((current) => current || ecoEntryScanned);
       setUnlockedQuestSlugs([
         ...spots.filter((item) => item.slug !== dawisSpot?.slug && item.id && visitedIds.has(item.id)).map((item) => item.slug),
         ...(entryScanned && dawisSpot ? [dawisSpot.slug] : []),
+        ...(ecoEntryScanned && ecoParkSpot ? [ecoParkSpot.slug] : []),
       ]);
     };
     void loadUnlockedMarkers();
@@ -780,6 +892,7 @@ export default function DigosAR() {
       if (!active) return;
       const currentUser = data.session?.user ?? null;
       setUser(currentUser);
+      setFirstUseGuideOpen(shouldShowFirstUseGuide(currentUser));
       const requestedView = new URLSearchParams(window.location.search).get('view') as Screen | null;
       const requested = requestedView && linkableScreens.has(requestedView) ? requestedView : null;
       const pendingNavigation = pendingNavigationRef.current;
@@ -797,6 +910,7 @@ export default function DigosAR() {
     }).catch((error) => { console.error('[DigosAR Boot ERROR] getSession failed', error); pendingNavigationRef.current = null; setAuthToast('Unable to verify your session. Try again shortly.'); }).finally(() => { if (active) { setAuthLoading(false); markBoot('getSession finished'); } });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      setFirstUseGuideOpen(shouldShowFirstUseGuide(session?.user ?? null));
       if (!session?.user) { setProfile(null); setProfileLoading(false); }
     });
     return () => { active = false; listener.subscription.unsubscribe(); };
@@ -841,15 +955,15 @@ export default function DigosAR() {
   if (screen === 'home') content = <HomeScreen go={go} open={open} openMap={openMap} spots={spots} displayName={profile?.display_name || 'Explorer'} challengeProgress={challengeProgress} />;
   else if (screen === 'explore') content = <ExploreScreen open={open} spots={spots} />;
   else if (screen === 'details') content = <DetailsScreen spot={spot} go={go} openMap={openMapForSpot} />;
-  else if (screen === 'ar') content = <ARCameraScreen onBack={() => go(previous === 'ar' ? 'home' : previous)} onTargetScanned={recordTargetScan} onOpenQuest={() => go('quest')} />;
+  else if (screen === 'ar') content = <ARCameraScreen targetSet={arTargetSet} ecoQuestUnlocked={ecoParkQuestUnlocked} onBack={() => go(previous === 'ar' ? 'home' : previous)} onTargetScanned={recordTargetScan} onOpenQuest={() => go('quest')} />;
   else if (screen === 'navigation') content = <NavigationScreen spot={spot} go={go} />;
   else if (screen === 'model') content = <ModelScreen spot={spot} go={go} />;
-  else if (screen === 'quest') content = <QuestExplorer spots={spots} unlockedSlugs={unlockedQuestSlugs} questUnlocked={dawisQuestUnlocked} userId={user?.id} scanSpot={(selectedSpot) => { setResumeQuestOnReturn(true); openAR(selectedSpot); }} onComplete={handleQuestComplete} openQuiz={(selectedSpot) => { setSpot(selectedSpot); go('quiz'); }} resumeQuest={resumeQuestOnReturn} onResumeQuestConsumed={() => setResumeQuestOnReturn(false)} />;
+  else if (screen === 'quest') content = <QuestExplorer spots={spots} unlockedSlugs={unlockedQuestSlugs} questUnlocked={dawisQuestUnlocked} ecoQuestUnlocked={ecoParkQuestUnlocked} userId={user?.id} scanSpot={(selectedSpot, targetSet = 'dawis') => { setResumeQuestOnReturn(targetSet === 'dawis'); setResumeEcoQuestOnReturn(targetSet === 'eco-park'); openAR(selectedSpot, targetSet); }} onComplete={handleQuestComplete} resumeQuest={resumeQuestOnReturn} onResumeQuestConsumed={() => setResumeQuestOnReturn(false)} resumeEcoQuest={resumeEcoQuestOnReturn} onResumeEcoQuestConsumed={() => setResumeEcoQuestOnReturn(false)} />;
   else if (screen === 'quiz') content = <QuestScreen go={go} spot={spot} userId={user?.id} onComplete={handleQuestComplete} />;
   else if (screen === 'achievements') content = <AchievementsScreen back={() => go('profile')} profile={profile} stats={stats} gameData={gameData} spots={spots} />;
   else if (!user) content = <HomeScreen go={go} open={open} openMap={openMap} spots={spots} displayName="Explorer" challengeProgress={0} />;
   else if (!profile) content = <div className="screen profile-screen"><header className="light-header profile-header"><span className="header-spacer" aria-hidden="true" /><h1>Profile</h1><span className="header-spacer" aria-hidden="true" /></header><section className="profile-load-state" aria-live="polite"><strong>{profileLoading ? 'Loading your profile…' : 'Profile is unavailable right now'}</strong><span>{profileLoading ? 'You can keep exploring while this finishes.' : 'Your other screens are still available.'}</span>{!profileLoading && <button type="button" onClick={() => void refreshProfile()}>Try again</button>}</section></div>;
-  else content = <ProfileScreen user={user} profile={profile} stats={stats} gameData={gameData} onSignOut={() => void signOut()} onContinueExploring={() => go('explore')} refreshProfile={refreshProfile} signingOut={actionLoading} />;
+  else content = <ProfileScreen user={user} profile={profile} stats={stats} gameData={gameData} onSignOut={() => void signOut()} onContinueExploring={() => go('explore')} onReplayGuide={replayFirstUseGuide} refreshProfile={refreshProfile} signingOut={actionLoading} />;
   const isGloballyLoading = screen !== 'ar' && !bootTimedOut && actionLoading;
   const loadingLabel = 'Please wait…';
   const usesDarkShell = ['home', 'explore', 'quest', 'quiz', 'achievements', 'profile'].includes(screen);
@@ -860,6 +974,7 @@ export default function DigosAR() {
       {screen !== 'ar' && <div className={`status-bar ${['home','navigation'].includes(screen) ? 'light' : ''}`}><span>9:41</span><div><i /><i /><b /></div></div>}
       <div className="app-content">{content}</div>
       <ExploreMapDialog open={exploreMapOpen} onOpenChange={setExploreMapOpen} destination={mapDestination} setDestination={setMapDestination} />
+      <FirstUseGuide open={firstUseGuideOpen} onFinish={() => void finishFirstUseGuide()} onNavigate={navigateFirstUseGuide} />
       {screen !== 'ar' && screen !== 'details' && <BottomNav active={active} go={go} />}
       {authToast && <output className="auth-required-toast">{authToast}</output>}
       {achievementToast && <button

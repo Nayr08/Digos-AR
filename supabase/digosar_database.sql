@@ -472,7 +472,7 @@ insert into public.tourist_spots (
    'Dawis Beach offers a simple coastal escape within easy reach of the city.',
    'Dawis reflects the city''s enduring connection to the Davao Gulf and coastal livelihoods.',
    'Simple seaside gatherings and community life give the area its relaxed local character.',
-   'December – May', 7.80, 100, 4.6, '/touristspot/dawis-coast.webp', true, true, true)
+   'December – May', 7.80, 100, 4.6, '/touristspot/dawisv2.webp', true, true, true)
 on conflict (slug) do update set
   category_id = excluded.category_id,
   name = excluded.name,

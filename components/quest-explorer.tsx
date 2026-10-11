@@ -2,16 +2,17 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Anchor, Award, Check, CheckCircle2, ChevronLeft, ChevronRight,
+  Anchor, Award, Check, CheckCircle2, ChevronLeft, ChevronRight, Leaf,
   Compass, KeyRound, Landmark, LockKeyhole, MapPin, Navigation, Route, Scan, ScrollText,
   Sparkles, Trophy, Waves,
 } from 'lucide-react';
 import type { Destination } from '@/lib/digosar-data';
-import { loadDawisQuestProgress, saveDawisQuestProgress, type SyncedQuestProgress } from '@/lib/quest-progress';
+import { loadDawisQuestProgress, loadQuestProgress, saveDawisQuestProgress, type SyncedQuestProgress } from '@/lib/quest-progress';
 import { supabase } from '@/lib/supabase';
 import { Progress } from '@/components/ui/progress';
 import { QuestMascotGuide } from '@/components/quest-mascot-guide';
 import { RewardModelViewer } from '@/components/reward-model-viewer';
+import { EcoParkQuest } from '@/components/eco-park-quest';
 import { Dialog } from '@base-ui/react/dialog';
 
 type QuestStage = 'map' | 'discoveries' | 'quiz' | 'complete';
@@ -145,19 +146,21 @@ type QuestPresentation = { shortName: string; trailName: string; summary: string
 
 const questPresentations: Record<string, QuestPresentation> = {
   'dawis-heritage-wharf': { shortName: 'Dawis Heritage Wharf', trailName: 'Dawis Coastal Trail', summary: 'Follow the shore and discover the stories of Dawis.', stops: ['Shoreline', 'Bollards', 'Pier', 'Platform'] },
+  'digos-city-eco-park-arboretum': { shortName: 'Eco Park', trailName: 'Eco Park Green Quest', summary: 'Follow the park trail to the lake, heritage tree, and Barling wrecks.', stops: ['Park gateway', 'Park lake', 'Heritage tree', 'Barling wrecks'] },
   'rizal-park': { shortName: 'Rizal Park', trailName: 'Rizal Heritage Walk', summary: 'Explore the city landmark and its civic history.', stops: ['Park gate', 'Monument', 'Plaza'] },
-  'digos-city-eco-park-arboretum': { shortName: 'Eco Park', trailName: 'Eco Park Nature Trail', summary: 'Discover the lake, gardens, and local trees.', stops: ['Lake', 'Canopy', 'Arboretum'] },
   'mary-mother-mediatrix-cathedral': { shortName: 'Mediatrix Cathedral', trailName: 'Mediatrix Heritage Visit', summary: 'Discover the cathedral and its place in Digos.', stops: ['Cathedral', 'Courtyard', 'Shrine'] },
 };
+const ecoDiscoveryIds = ['eco-trail-gateway', 'eco-lake-guardian', 'eco-heritage-tree', 'eco-barling-wrecks'];
 
-function QuestPreviewCard({ spot, presentation, progress, isDawis, nextStop, onView }: { spot: Destination; presentation: QuestPresentation; progress: number; isDawis: boolean; nextStop: string; onView: () => void }) {
-  const mapImage = isDawis ? '/ar/quest-dawis-map-current-v3.webp' : spot.image;
+function QuestPreviewCard({ spot, presentation, progress, isDawis, isEcoPark, nextStop, onView }: { spot: Destination; presentation: QuestPresentation; progress: number; isDawis: boolean; isEcoPark: boolean; nextStop: string; onView: () => void }) {
+  const mapImage = isDawis ? '/ar/quest-dawis-map-current-v3.webp' : isEcoPark ? '/ar/maps/eco-park-quest-map.webp' : spot.image;
   return <section className="quest-preview-card">
-    <div className="quest-preview-heading"><span><Route size={24} /></span><div><h2>{presentation.trailName}</h2><p>{presentation.stops.length} stops <i /> AR experiences <i /> rewards</p></div><ChevronRight size={23} /></div>
+    <div className="quest-preview-heading"><span>{isEcoPark ? <Leaf size={24} /> : <Route size={24} />}</span><div><h2>{presentation.trailName}</h2><p>{presentation.stops.length} stops <i /> AR experiences <i /> rewards</p></div><ChevronRight size={23} /></div>
     <div className={`quest-preview-map ${isDawis ? 'is-dawis-map' : ''}`}>
-      {/* oxlint-disable-next-line next/no-img-element */}<img className="quest-preview-map-image" src={mapImage} alt={`${presentation.trailName} route preview`} />
+      {/* oxlint-disable-next-line next/no-img-element */}<img className="quest-preview-map-image" src={mapImage} alt={isEcoPark ? 'Eco Park destination preview' : `${presentation.trailName} route preview`} />
+      {isEcoPark && <span className="eco-preview-route-label">ECO PARK TRAIL</span>}
     </div>
-    <div className="quest-preview-footer"><div className="quest-preview-footer-info"><div className="quest-preview-next-stop"><MapPin size={19} fill="currentColor" /><strong>Next stop: {nextStop}</strong></div><div className="quest-preview-progress"><strong>{progress}<span> / {presentation.stops.length} stops</span></strong><div className="quest-preview-track" aria-label={`${progress} of ${presentation.stops.length} stops complete`}>{presentation.stops.map((stop, index) => <i className={index < progress ? 'is-complete' : ''} key={stop} />)}</div></div></div><button type="button" className="quest-preview-action" onClick={onView}>View Quest <ChevronRight size={21} /></button></div>
+    <div className="quest-preview-footer"><div className="quest-preview-footer-info"><div className="quest-preview-next-stop"><MapPin size={19} fill="currentColor" /><strong>{progress >= presentation.stops.length ? 'Trail complete' : `Next stop: ${nextStop}`}</strong></div><div className="quest-preview-progress"><strong>{progress}<span> / {presentation.stops.length} stops</span></strong><div className="quest-preview-track" aria-label={`${progress} of ${presentation.stops.length} stops complete`}>{presentation.stops.map((stop, index) => <i className={index < progress ? 'is-complete' : ''} key={stop} />)}</div></div></div><button type="button" className="quest-preview-action" data-tour={isDawis ? 'quest-preview-view' : undefined} onClick={onView}>View Quest <ChevronRight size={21} /></button></div>
   </section>;
 }
 
@@ -242,31 +245,37 @@ export function QuestExplorer({
   spots,
   unlockedSlugs,
   questUnlocked,
+  ecoQuestUnlocked,
   scanSpot,
   userId,
   onComplete,
   resumeQuest = false,
   onResumeQuestConsumed,
+  resumeEcoQuest = false,
+  onResumeEcoQuestConsumed,
 }: {
   spots: Destination[];
   unlockedSlugs: string[];
   questUnlocked: boolean;
-  scanSpot: (spot: Destination) => void;
+  ecoQuestUnlocked: boolean;
+  scanSpot: (spot: Destination, targetSet?: 'dawis' | 'eco-park') => void;
   userId?: string;
   onComplete: (spot: Destination) => void | Promise<void>;
-  openQuiz: (spot: Destination) => void;
   resumeQuest?: boolean;
   onResumeQuestConsumed?: () => void;
+  resumeEcoQuest?: boolean;
+  onResumeEcoQuestConsumed?: () => void;
 }) {
   const dawis = useMemo(() => spots.find((spot) => spot.slug === 'dawis-heritage-wharf') ?? spots[0], [spots]);
   const questSpots = useMemo(() => {
     const bySlug = new Map(spots.map((spot) => [spot.slug, spot]));
-    return ['dawis-heritage-wharf', 'rizal-park', 'digos-city-eco-park-arboretum', 'mary-mother-mediatrix-cathedral']
+    return ['dawis-heritage-wharf', 'digos-city-eco-park-arboretum', 'rizal-park', 'mary-mother-mediatrix-cathedral']
       .map((slug) => bySlug.get(slug))
       .filter((spot): spot is Destination => Boolean(spot));
   }, [spots]);
-  const [view, setView] = useState<'list' | 'active'>(() => resumeQuest ? 'active' : 'list');
+  const [view, setView] = useState<'list' | 'active' | 'eco'>(() => resumeEcoQuest ? 'eco' : resumeQuest ? 'active' : 'list');
   const resumedAtMountRef = useRef(resumeQuest);
+  const resumedEcoAtMountRef = useRef(resumeEcoQuest);
   const [expandedQuestSlug, setExpandedQuestSlug] = useState<string | null>(null);
   const [comingSoonQuest, setComingSoonQuest] = useState<string | null>(null);
   const [stage, setStage] = useState<QuestStage>('map');
@@ -286,6 +295,31 @@ export function QuestExplorer({
   const [compassStatus, setCompassStatus] = useState<'idle' | 'waiting' | 'active' | 'unavailable' | 'denied'>('idle');
   const sheetDrag = useRef<{ startY: number; startHeight: number; min: number; max: number } | null>(null);
   const [sheetDragHeight, setSheetDragHeight] = useState<number | null>(null);
+  const ecoPark = useMemo(() => spots.find((spot) => spot.slug === 'digos-city-eco-park-arboretum'), [spots]);
+  const [ecoDiscoveredIds, setEcoDiscoveredIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const storageKey = `digosar:quest-progress:eco-park-green-quest:${userId ?? 'guest'}`;
+    let active = true;
+    const readEcoProgress = () => {
+      let localIds: string[] = [];
+      try {
+        const saved = window.localStorage.getItem(storageKey);
+        const progress = saved ? JSON.parse(saved) as { discoveries?: unknown } : {};
+        localIds = Array.isArray(progress.discoveries) ? progress.discoveries.filter((id): id is string => typeof id === 'string' && ecoDiscoveryIds.includes(id)) : [];
+      } catch { /* Fall back to server progress for signed-in explorers. */ }
+      setEcoDiscoveredIds(localIds);
+      if (!userId || !ecoPark?.id) return;
+      void loadQuestProgress(userId, ecoPark.id, 'eco-park-green-quest').then((synced) => {
+        if (!active) return;
+        const serverIds = synced?.progress?.discoveries.filter((id) => ecoDiscoveryIds.includes(id)) ?? [];
+        setEcoDiscoveredIds(Array.from(new Set([...localIds, ...serverIds])));
+      }).catch(() => { /* Local progress remains available when the quest service is offline. */ });
+    };
+    readEcoProgress();
+    window.addEventListener('focus', readEcoProgress);
+    return () => { active = false; window.removeEventListener('focus', readEcoProgress); };
+  }, [ecoPark?.id, userId]);
 
   useEffect(() => {
     if (!questSheetExpanded || !selectedDiscovery) return;
@@ -331,6 +365,13 @@ export function QuestExplorer({
       onResumeQuestConsumed?.();
     }
   }, [resumeQuest, onResumeQuestConsumed]);
+
+  useEffect(() => {
+    if (resumeEcoQuest && resumedEcoAtMountRef.current) {
+      resumedEcoAtMountRef.current = false;
+      onResumeEcoQuestConsumed?.();
+    }
+  }, [resumeEcoQuest, onResumeEcoQuestConsumed]);
 
   useEffect(() => {
     let active = true;
@@ -495,24 +536,28 @@ export function QuestExplorer({
     </Dialog.Portal>
   </Dialog.Root>;
 
+  if (view === 'eco' && ecoPark) return <EcoParkQuest spot={ecoPark} userId={userId} questUnlocked={ecoQuestUnlocked} compassEnabled={compassEnabled} compassHeading={compassHeading} compassStatus={compassStatus} onToggleCompass={toggleCompass} onBack={() => setView('list')} onComplete={onComplete} onScanTarget={() => scanSpot(ecoPark, 'eco-park')} />;
+
   if (view === 'list') return <div className="screen quest-explorer quest-board-screen">
     <section className="quest-board-hero"><div className="quest-board-hero-copy"><h1>Challenges</h1><p>Explore trails. Complete quests.</p></div><span className="quest-board-mascot" aria-hidden="true" /></section>
     <section className="quest-board-panel" aria-label="Your Digos adventures"><h2 className="quest-board-section-title">YOUR DIGOS ADVENTURES</h2><div className="quest-challenge-list" aria-label="Digos quests">
       {questSpots.map((questSpot) => {
         const presentation = questPresentations[questSpot.slug] ?? { shortName: questSpot.name, trailName: `${questSpot.name} Quest`, summary: questSpot.description, stops: ['Discover', 'Explore', 'Learn'] };
         const questIsReady = questSpot.slug === dawis.slug ? questUnlocked : unlockedSlugs.includes(questSpot.slug);
-        const progress = questSpot.slug === dawis.slug ? discoveredCount : 0;
+        const progress = questSpot.slug === dawis.slug ? discoveredCount : questSpot.slug === 'digos-city-eco-park-arboretum' ? ecoQuestUnlocked ? ecoDiscoveredIds.length : 0 : 0;
         const isExpanded = expandedQuestSlug === questSpot.slug;
         const isDawisQuest = questSpot.slug === dawis.slug;
-        const nextStop = isDawisQuest && !questUnlocked ? 'Shoreline' : presentation.stops[Math.min(progress, presentation.stops.length - 1)];
+        const isEcoParkQuest = questSpot.slug === 'digos-city-eco-park-arboretum';
+        const nextStop = isDawisQuest && !questUnlocked ? 'Dawis Wharf marker' : isEcoParkQuest && !ecoQuestUnlocked ? 'Eco Park marker' : presentation.stops[Math.min(progress, presentation.stops.length - 1)];
         return <div className={isExpanded ? 'quest-challenge-entry is-expanded' : 'quest-challenge-entry'} key={questSpot.slug}>
-          <button type="button" className="quest-challenge-row" onClick={() => setExpandedQuestSlug(isExpanded ? null : questSpot.slug)} aria-expanded={isExpanded} aria-label={`${isExpanded ? 'Close' : 'Open'} ${presentation.shortName} quest`}>
+          <button type="button" className="quest-challenge-row" data-tour={isDawisQuest ? 'quest-dawis-row' : undefined} onClick={() => setExpandedQuestSlug(isExpanded ? null : questSpot.slug)} aria-expanded={isExpanded} aria-label={`${isExpanded ? 'Close' : 'Open'} ${presentation.shortName} quest`}>
             <span className="quest-challenge-thumb" style={{ backgroundImage: `url('${questSpot.image}')` }}><small>{questSpot.type}</small></span>
-            <span className="quest-challenge-copy"><strong>{presentation.shortName}</strong><small>{isDawisQuest || questIsReady ? presentation.summary : questSpot.slug === 'digos-city-eco-park-arboretum' ? 'Discover nature and earn rewards' : 'Scan markers to unlock'}</small><span className="quest-challenge-progress"><span>{progress} / {presentation.stops.length} stops</span><i aria-hidden="true">{presentation.stops.map((stop, index) => <b className={index < progress ? 'is-complete' : ''} key={stop} />)}</i></span></span>
-            <span className="quest-challenge-side"><b><Sparkles size={12} /> +{questSpot.xpReward} XP</b><ChevronRight className={isExpanded ? 'is-expanded' : ''} size={19} /></span>
+            <span className="quest-challenge-copy"><strong>{presentation.shortName}</strong><small>{isDawisQuest || isEcoParkQuest || questIsReady ? presentation.summary : 'Scan markers to unlock'}</small><span className="quest-challenge-progress"><span>{`${progress} / ${presentation.stops.length} stops`}</span><i aria-hidden="true">{presentation.stops.map((stop, index) => <b className={index < progress ? 'is-complete' : ''} key={stop} />)}</i></span></span>
+            <span className="quest-challenge-side"><b><Sparkles size={12} /> +{isEcoParkQuest ? 150 : questSpot.xpReward} XP</b><ChevronRight className={isExpanded ? 'is-expanded' : ''} size={19} /></span>
           </button>
-          {isExpanded && <QuestPreviewCard spot={questSpot} presentation={presentation} progress={progress} isDawis={isDawisQuest} nextStop={nextStop} onView={() => {
+          {isExpanded && <QuestPreviewCard spot={questSpot} presentation={presentation} progress={progress} isDawis={isDawisQuest} isEcoPark={isEcoParkQuest} nextStop={nextStop} onView={() => {
             if (isDawisQuest) setView('active');
+            else if (isEcoParkQuest) setView('eco');
             else setComingSoonQuest(presentation.shortName);
           }} />}
         </div>;
@@ -598,7 +643,7 @@ export function QuestExplorer({
             <b className="quest-map-progress-fill" style={{ width: `${Math.min(discoveredCount / 4, 1) * 100}%` }} />
           </span>
         </button>
-        <div className="quest-map-next-stop"><span><MapPin size={19} fill="currentColor" /></span><div><small>{progressState.quizCompleted ? 'QUEST COMPLETE' : questUnlocked ? nextDiscovery ? 'TARGETS · ANY ORDER' : 'QUIZ READY' : 'START HERE'}</small><strong>{questUnlocked ? nextDiscovery ? 'Scan any of the four markers' : 'Heritage quiz' : 'Dawis Wharf marker'}</strong></div><button type="button" disabled={progressState.quizCompleted} onClick={() => { if (questUnlocked) setQuestSheetExpanded(true); openNextStop(); }}>{progressState.quizCompleted ? 'Completed' : questUnlocked ? nextDiscovery ? 'Scan Any Target' : 'Take the Quiz' : 'Scan Dawis Marker'} <ChevronRight size={17} /></button></div>
+        <div className="quest-map-next-stop"><span><MapPin size={19} fill="currentColor" /></span><div><small>{progressState.quizCompleted ? 'QUEST COMPLETE' : questUnlocked ? nextDiscovery ? 'TARGETS · ANY ORDER' : 'QUIZ READY' : 'START HERE'}</small><strong>{questUnlocked ? nextDiscovery ? 'Scan any of the four markers' : 'Heritage quiz' : 'Dawis Wharf marker'}</strong></div><button type="button" data-tour={!progressState.quizCompleted && (!questUnlocked || Boolean(nextDiscovery)) ? 'quest-scan' : undefined} disabled={progressState.quizCompleted} onClick={() => { if (questUnlocked) setQuestSheetExpanded(true); openNextStop(); }}>{progressState.quizCompleted ? 'Completed' : questUnlocked ? nextDiscovery ? 'Scan Any Target' : 'Take the Quiz' : 'Scan Dawis Marker'} <ChevronRight size={17} /></button></div>
         <div className="quest-progress-sheet-content" id="quest-progress-sheet-content" aria-hidden={!questSheetExpanded && sheetDragHeight === null}>
           <QuestTargetsPanel progress={progressState} questUnlocked={questUnlocked} selectedDiscovery={selectedDiscovery} onSelect={setSelectedDiscovery} onScanTarget={() => scanSpot(dawis)} onDigClue={revealPlatformClue} onOpenReward={setActiveReward} onUseClue={() => { setQuizIndex(0); setQuizChoice(null); setQuizFeedback(null); setStage('quiz'); }} />
         </div>
@@ -618,7 +663,7 @@ export function QuestExplorer({
         <small>QUEST LOCKED</small>
         <h2>Scan Dawis to begin</h2>
         <p>The Dawis Wharf Walk opens when you scan the main Dawis marker in AR. After it is recognized, this route and its four discovery markers will be ready.</p>
-        <button className="quest-primary-button" type="button" onClick={() => scanSpot(dawis)}><Scan size={17} /> Scan the Dawis marker</button>
+        <button className="quest-primary-button" type="button" data-tour="quest-scan" onClick={() => scanSpot(dawis)}><Scan size={17} /> Scan the Dawis marker</button>
       </section>}
       {questUnlocked && <RouteMap progress={progressState} onSelect={setStage} />}
 

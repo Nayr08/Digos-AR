@@ -37,3 +37,12 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+
+# Local 3D authoring files and render exports; deployable models live under public/
+/blender/
+/*.blend
+/*.blend1
+/*.glb
+/*.png
+/map-build.log
+/tsconfig.tsbuildinfo

@@ -1,7 +1,7 @@
 -- DigosAR quest progress migration
 --
 -- Run this after digosar_database.sql and digosar_app_seed.sql.
--- It stores the Dawis route progress in Supabase per authenticated user.
+-- It stores Dawis and Eco Park quest progress in Supabase per authenticated user.
 -- The app no longer needs localStorage for quest discoveries, platform clues,
 -- quiz completion, or the unlocked tourist-spot route.
 
@@ -63,7 +63,7 @@ before update on public.user_quest_progress
 for each row execute function public.set_updated_at();
 
 -- ---------------------------------------------------------------------------
--- Dawis discovery definitions used by the current Quest screen
+-- Dawis and Eco Park discovery definitions used by their Quest screens
 -- ---------------------------------------------------------------------------
 
 insert into public.quest_discovery_steps (quest_id, slug, title, position, marker_src)
@@ -76,6 +76,22 @@ cross join (values
   ('terminal-platform', 'Terminal platform', 4, '/ar/targets/quest/terminal-platform.png')
 ) as step(slug, title, position, marker_src)
 where q.slug = 'dawis-sunrise-stories'
+on conflict (quest_id, slug) do update
+set title = excluded.title,
+    position = excluded.position,
+    marker_src = excluded.marker_src,
+    updated_at = now();
+
+insert into public.quest_discovery_steps (quest_id, slug, title, position, marker_src)
+select q.id, step.slug, step.title, step.position, step.marker_src
+from public.quests q
+cross join (values
+  ('eco-trail-gateway', 'Eco Park Gateway · Eco Trail Key', 1, '/ar/targets/eco-quest/eco-trail-gateway.webp'),
+  ('eco-lake-guardian', 'Park lake · Lake Guardian', 2, '/ar/targets/eco-quest/lake-guardian.webp'),
+  ('eco-heritage-tree', 'Century-old Heritage Tree', 3, '/ar/targets/eco-quest/heritage-tree.webp'),
+  ('eco-barling-wrecks', 'Barling wrecks', 4, '/ar/targets/eco-quest/barling-wrecks.webp')
+) as step(slug, title, position, marker_src)
+where q.slug = 'eco-park-green-quest'
 on conflict (quest_id, slug) do update
 set title = excluded.title,
     position = excluded.position,

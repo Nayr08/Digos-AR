@@ -37,28 +37,28 @@ insert into public.tourist_spots (
    'Dawis Heritage Wharf offers an open coastal setting for sunrise walks, sea views, and relaxed community visits.',
    'The Dawis waterfront reflects the city''s long relationship with coastal travel, fishing, and community trade.',
    'Sunrise walks, family gatherings, and views across the gulf make the wharf a shared civic space.',
-   'Sunrise', 6.80, 100, 4.8, '/touristspot/dawis-coast.webp', false, true, true),
-  ((select id from public.categories where slug = 'history'),
-   'rizal-park', 'Rizal Park', 'Digos City',
-   'A central public park for civic events, quiet breaks, and community gatherings.',
-   'Rizal Park is an accessible green space in the city center where residents meet, rest, and take part in public activities.',
-   'Named for national hero José Rizal, the park is part of the city center''s civic landscape.',
-   'The park serves as a meeting place and venue for public celebrations in Digos.',
-   'Late afternoon', 0.50, 100, 4.7, '/touristspot/digos-rizalpark.webp', false, true, true),
+   'Sunrise', 6.80, 100, 4.8, '/touristspot/dawisv2.webp', false, true, true),
   ((select id from public.categories where slug = 'nature'),
    'digos-city-eco-park-arboretum', 'Digos City Eco Park and Arboretum', 'Digos City',
    'A green learning space dedicated to trees, biodiversity, and environmental stewardship.',
    'The eco park and arboretum combines nature appreciation, recreation, and environmental learning in one city destination.',
    'The city developed the eco park and arboretum as a place for conservation, recreation, and environmental activities.',
    'Tree planting and nature education connect visitors with Digos City''s environmental programs.',
-   'Early morning', 4.80, 100, 4.9, '/touristspot/digos-ecopark.webp', false, true, true),
+   'Early morning', 4.80, 100, 4.9, '/touristspot/ecopark-v2.webp', false, true, true),
+  ((select id from public.categories where slug = 'history'),
+   'rizal-park', 'Rizal Park', 'Digos City',
+   'A central public park for civic events, quiet breaks, and community gatherings.',
+   'Rizal Park is an accessible green space in the city center where residents meet, rest, and take part in public activities.',
+   'Named for national hero José Rizal, the park is part of the city center''s civic landscape.',
+   'The park serves as a meeting place and venue for public celebrations in Digos.',
+   'Late afternoon', 0.50, 100, 4.7, '/touristspot/rizalparkv2.webp', false, true, true),
   ((select id from public.categories where slug = 'culture'),
    'mary-mother-mediatrix-cathedral', 'Mary, Mother and Mediatrix of Grace Cathedral', 'Rizal Avenue, Digos City',
    'The cathedral church of the Diocese of Digos and a living center of local Catholic faith.',
    'The cathedral welcomes worshippers and visitors to a major spiritual and architectural landmark in the city center.',
    'The cathedral is closely tied to the growth of the Diocese of Digos and its Marian devotion.',
    'Worship, feast-day observances, and diocesan gatherings make the cathedral a major spiritual landmark.',
-   'Morning', 0.80, 100, 4.9, '/touristspot/digos-mother-tree.webp', false, true, true)
+   'Morning', 0.80, 100, 4.9, '/touristspot/mediatrixv2.webp', false, true, true)
 on conflict (slug) do update set
   category_id = excluded.category_id,
   name = excluded.name,
@@ -78,8 +78,8 @@ on conflict (slug) do update set
 
 insert into public.badges (slug, name, description, icon, color, xp_required) values
   ('coastal-storykeeper', 'Coastal Storykeeper', 'Complete the Dawis Heritage Wharf quiz.', 'waves', '#4CC9C0', 0),
-  ('rizal-scholar', 'Rizal Scholar', 'Complete the Rizal Park quiz.', 'book-open', '#F4C542', 0),
   ('green-guardian', 'Green Guardian', 'Complete the Eco Park and Arboretum quiz.', 'leaf', '#78C850', 0),
+  ('rizal-scholar', 'Rizal Scholar', 'Complete the Rizal Park quiz.', 'book-open', '#F4C542', 0),
   ('cathedral-guide', 'Cathedral Guide', 'Complete the cathedral quiz.', 'landmark', '#B8FF72', 0)
 on conflict (slug) do update set
   name = excluded.name,
@@ -92,8 +92,8 @@ insert into public.quests (tourist_spot_id, slug, title, description, xp_reward,
 select s.id, seed.slug, seed.title, seed.description, 150, b.id, true
 from (values
   ('dawis-heritage-wharf', 'dawis-sunrise-stories', 'Dawis Sunrise Stories', 'Discover the coast, community, and sunrise character of Dawis.', 'coastal-storykeeper'),
-  ('rizal-park', 'rizal-park-civic-quest', 'Rizal Park Civic Quest', 'Learn why this central park matters to Digos City.', 'rizal-scholar'),
   ('digos-city-eco-park-arboretum', 'eco-park-green-quest', 'Eco Park Green Quest', 'Explore biodiversity, trees, and environmental stewardship.', 'green-guardian'),
+  ('rizal-park', 'rizal-park-civic-quest', 'Rizal Park Civic Quest', 'Learn why this central park matters to Digos City.', 'rizal-scholar'),
   ('mary-mother-mediatrix-cathedral', 'cathedral-heritage-quest', 'Cathedral Heritage Quest', 'Learn about the cathedral and its role in the Diocese of Digos.', 'cathedral-guide')
 ) as seed(spot_slug, slug, title, description, badge_slug)
 join public.tourist_spots s on s.slug = seed.spot_slug

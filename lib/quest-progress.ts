@@ -33,12 +33,12 @@ function normalizeProgress(row: ProgressRow | null): SyncedQuestProgress | null 
   };
 }
 
-export async function loadDawisQuestProgress(userId: string, touristSpotId: string): Promise<QuestProgressLoad | null> {
+export async function loadQuestProgress(userId: string, touristSpotId: string, questSlug: string): Promise<QuestProgressLoad | null> {
   const { data: quest, error: questError } = await supabase
     .from('quests')
     .select('id')
     .eq('tourist_spot_id', touristSpotId)
-    .eq('slug', 'dawis-sunrise-stories')
+    .eq('slug', questSlug)
     .eq('is_published', true)
     .maybeSingle();
 
@@ -57,7 +57,7 @@ export async function loadDawisQuestProgress(userId: string, touristSpotId: stri
   return { questId: questRow.id, progress: normalizeProgress(progress as ProgressRow | null) };
 }
 
-export async function saveDawisQuestProgress(
+export async function saveQuestProgress(
   userId: string,
   questId: string,
   progress: SyncedQuestProgress,
@@ -75,7 +75,19 @@ export async function saveDawisQuestProgress(
   if (error) throw error;
 }
 
-export async function recordDawisQuestDiscovery(
+export async function loadDawisQuestProgress(userId: string, touristSpotId: string): Promise<QuestProgressLoad | null> {
+  return loadQuestProgress(userId, touristSpotId, 'dawis-sunrise-stories');
+}
+
+export async function saveDawisQuestProgress(
+  userId: string,
+  questId: string,
+  progress: SyncedQuestProgress,
+): Promise<void> {
+  return saveQuestProgress(userId, questId, progress);
+}
+
+export async function recordQuestDiscovery(
   userId: string,
   questId: string,
   discoverySlug: string,

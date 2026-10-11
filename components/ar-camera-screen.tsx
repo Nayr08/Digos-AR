@@ -48,7 +48,7 @@ type DigosMapStop = {
 };
 
 const DIGOS_MAP_STOPS: DigosMapStop[] = [
-  { id: 'eco-park', label: 'Eco Park', title: 'Digos City Eco Park and Arboretum', modelSrc: '/ar/models/ecopark.glb', x: 469 / 1262, y: 70 / 771, footprint: 0.22, height: 0.24, description: 'A green escape with a lake, garden paths, and the Eco Park landscape rising from the north of the city map.' },
+  { id: 'eco-park', label: 'Eco Park', title: 'Digos City Eco Park and Arboretum', modelSrc: '/ar/models/ecopark.glb?v=eco-park-c-shape-2026-10', x: 469 / 1262, y: 70 / 771, footprint: 0.22, height: 0.24, description: 'A green escape with a lake, garden paths, and the Eco Park landscape rising from the north of the city map.' },
   { id: 'mediatrix', label: 'Mediatrix', title: 'Mary, Mediatrix of All Grace Cathedral', modelSrc: '/ar/models/mediatrix-cathedral.glb', x: 619 / 1262, y: 335 / 771, footprint: 0.15, height: 0.27, description: 'Find the cathedral at the heart of Digos, marked here on the city map.' },
   { id: 'rizal-park', label: 'Rizal Park', title: 'Rizal Park', modelSrc: '/ar/models/rizal-park.glb', x: 614 / 1262, y: 438 / 771, footprint: 0.17, height: 0.23, description: 'The city park rises just south of the cathedral, with its own map pin and miniature scene.' },
   { id: 'dawis', label: 'Dawis Beach', title: 'Dawis Beach and Heritage Wharf', modelSrc: '/ar/models/dawis-heritage-wharf-mobile.glb', x: 799 / 1262, y: 612 / 771, footprint: 0.22, height: 0.18, description: 'Follow the coast to Dawis Beach and its heritage wharf at the southern edge of the map.' },
@@ -142,6 +142,73 @@ const DAWIS_TARGET_CONFIGS: DawisTargetConfig[] = [
       history: { label: 'Stops', title: 'From green spaces to the coast', body: 'Visit the Eco Park, Mediatrix Cathedral, Rizal Park, and Dawis Beach.' },
       location: { label: 'Location', title: 'Digos City', body: 'Davao del Sur · Philippines' },
       fact: { label: 'Explore', title: 'Choose a map pin', body: 'Tap one of the four place buttons to highlight its miniature landmark.' },
+    },
+  },
+];
+
+const ECO_PARK_TARGET_CONFIGS: DawisTargetConfig[] = [
+  {
+    id: 'eco-park',
+    title: 'Digos City Eco Park and Arboretum',
+    modelSrc: '/ar/models/ecopark.glb?v=eco-park-c-shape-2026-10',
+    modelFootprint: 0.72,
+    infoSections: {
+      about: { label: 'About', title: 'Eco Park and Arboretum', body: 'A green space with a park lake, garden paths, mature trees, and places to pause outdoors.' },
+      history: { label: 'Care', title: 'Explore gently', body: 'Stay on public paths, follow posted park guidance, and leave plants and wildlife undisturbed.' },
+      location: { label: 'Trail', title: 'Start the Green Quest', body: 'Scan this Eco Park marker to unlock the four trail targets and their 3D rewards.' },
+      fact: { label: 'Trail', title: 'Choose any trail target', body: 'Once this Eco Park marker unlocks the quest, you can scan the four trail targets in any order.' },
+    },
+  },
+  {
+    id: 'eco-trail-gateway',
+    title: 'Eco Park · Trail Gateway',
+    modelSrc: '/ar/rewards/gold-key.glb',
+    modelFootprint: 0.72,
+    isReward: true,
+    infoSections: {
+      about: { label: 'Discovery', title: 'Eco Trail Key', body: 'A keepsake for starting the Eco Park Green Quest. Follow the park visitor path and scan the four trail markers.' },
+      history: { label: 'Care', title: 'Explore gently', body: 'Stay on designated paths, leave plants and wildlife undisturbed, and carry litter out of the park.' },
+      location: { label: 'Trail', title: 'Eco Park entrance', body: 'Start at the park gateway, then follow the illustrated route to each stop.' },
+      fact: { label: 'Trail', title: 'Choose any trail target', body: 'Explore the four Eco Park discovery markers in any order after scanning the park entrance marker.' },
+    },
+  },
+  {
+    id: 'eco-lake-guardian',
+    title: 'Eco Park · Lake Guardian',
+    modelSrc: '/ar/rewards/lake-guardian.glb',
+    modelFootprint: 0.72,
+    isReward: true,
+    infoSections: {
+      about: { label: 'Discovery', title: 'Lake Guardian', body: 'A 3D keepsake from the Eco Park lake stop. Look for the lake edge and observe the park’s water habitat.' },
+      history: { label: 'Care', title: 'Keep the water healthy', body: 'Leave plants and wildlife undisturbed, and carry litter out of the park.' },
+      location: { label: 'Trail', title: 'Eco Park lake', body: 'Use the designated visitor path around the water.' },
+      fact: { label: 'Trail', title: 'Choose any trail target', body: 'Explore the four Eco Park discovery markers in any order after scanning the park entrance marker.' },
+    },
+  },
+  {
+    id: 'eco-heritage-tree',
+    title: 'Eco Park · Century-old Heritage Tree',
+    modelSrc: '/ar/rewards/century-tree.glb',
+    modelFootprint: 0.72,
+    isReward: true,
+    infoSections: {
+      about: { label: 'Discovery', title: 'Century-old Heritage Tree', body: 'A 3D keepsake for the living landmark stop. Appreciate the tree from the visitor path and avoid disturbing its roots.' },
+      history: { label: 'Care', title: 'Protect a living landmark', body: 'Stay behind barriers and follow any park guidance around the tree.' },
+      location: { label: 'Trail', title: 'Eco Park arboretum', body: 'Look for the heritage tree along the Eco Park trail.' },
+      fact: { label: 'Trail', title: 'Choose any trail target', body: 'Explore the four Eco Park discovery markers in any order after scanning the park entrance marker.' },
+    },
+  },
+  {
+    id: 'eco-barling-wrecks',
+    title: 'Eco Park · Barling Wrecks',
+    modelSrc: '/ar/rewards/barling_wrecks.glb',
+    modelFootprint: 0.72,
+    isReward: true,
+    infoSections: {
+      about: { label: 'Discovery', title: 'Barling Wrecks', body: 'A 3D keepsake for the wrecks stop. Observe the remains from the designated visitor area.' },
+      history: { label: 'Care', title: 'Respect the site', body: 'Do not climb on, touch, or remove material from the wrecks.' },
+      location: { label: 'Trail', title: 'Eco Park trail', body: 'Follow posted access guidance to the Barling wrecks viewing area.' },
+      fact: { label: 'Trail', title: 'All four targets found', body: 'Return to the quest to review all four finds and take the park quiz.' },
     },
   },
 ];
@@ -348,11 +415,41 @@ type MindARInstance = {
   addAnchor: (targetIndex: number) => MindARAnchor;
   renderer: { setAnimationLoop: (callback: (() => void) | null) => void; render: (scene: unknown, camera: unknown) => void; dispose?: () => void; domElement?: HTMLElement };
   cssRenderer?: { domElement?: HTMLElement };
+  // MindAR creates these during start(); stop() assumes both are already ready.
+  video?: HTMLVideoElement;
+  controller?: { stopProcessVideo?: () => void };
   scene: unknown;
   camera: unknown;
 };
 
-export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBack: () => void; onTargetScanned?: (targetId: string) => void; onOpenQuest?: () => void }) {
+function safelyStopMindAR(mindar: MindARInstance, container?: HTMLElement | null) {
+  const renderer = mindar.renderer;
+  const video = mindar.video ?? container?.querySelector('video') ?? undefined;
+
+  try { renderer?.setAnimationLoop?.(null); } catch { /* renderer may already be torn down */ }
+  // MindARThree.stop() dereferences controller without checking whether start()
+  // reached _startAR. Only call it once that controller exists.
+  if (mindar.controller?.stopProcessVideo) {
+    try { mindar.stop(); } catch { /* stop the stream directly if MindAR is partial */ }
+  }
+
+  try {
+    const stream = video?.srcObject as MediaStream | null | undefined;
+    stream?.getTracks?.().forEach((track) => {
+      try { track.stop(); } catch { /* a track may already have ended */ }
+    });
+  } catch { /* partially initialized camera stream */ }
+  try { video?.pause(); } catch { /* video may not have started */ }
+  video?.remove();
+
+  try { renderer?.dispose?.(); } catch { /* WebGL context may already be lost */ }
+  renderer?.domElement?.remove();
+  mindar.cssRenderer?.domElement?.remove();
+}
+
+export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest, targetSet = 'dawis', ecoQuestUnlocked = false }: { onBack: () => void; onTargetScanned?: (targetId: string) => void; onOpenQuest?: () => void; targetSet?: 'dawis' | 'eco-park'; ecoQuestUnlocked?: boolean }) {
+  const targetConfigs = targetSet === 'eco-park' ? ECO_PARK_TARGET_CONFIGS : DAWIS_TARGET_CONFIGS;
+  const targetBundle = targetSet === 'eco-park' ? '/ar/targets/eco-park-quest.mind?v=eco-park-entry-1' : '/ar/targets/dawis-quest.mind';
   const containerRef = useRef<HTMLDivElement>(null);
   const mindarRef = useRef<MindARInstance | null>(null);
   const mountedRef = useRef(false);
@@ -361,7 +458,7 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
   const modelPivotRef = useRef<THREE.Group | null>(null);
   const anchorRef = useRef<MindARAnchor | null>(null);
   const anchorRefsRef = useRef<MindARAnchor[]>([]);
-  const activeTargetConfigRef = useRef<DawisTargetConfig>(DAWIS_TARGET_CONFIGS[0]);
+  const activeTargetConfigRef = useRef<DawisTargetConfig>(targetConfigs[0]);
   const animationFrameRef = useRef<number | null>(null);
   const infoTimerRef = useRef<number | null>(null);
   const modelLoadingRef = useRef(false);
@@ -380,12 +477,14 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
   const mapFocusAnimationFrameRef = useRef<number | null>(null);
   const [cameraState, setCameraState] = useState<CameraState>('requesting');
   const [activeTargetId, setActiveTargetId] = useState<string | null>(null);
+  const [blockedScanMessage, setBlockedScanMessage] = useState('');
+  const ecoQuestUnlockedRef = useRef(ecoQuestUnlocked);
   const [isDawisDetected, setIsDawisDetected] = useState(false);
   const [presentationState, setPresentationState] = useState<PresentationState>('SEARCHING');
   const presentationStateRef = useRef<PresentationState>('SEARCHING');
   const [activeInfoTab, setActiveInfoTab] = useState<InfoTab>('about');
-  const [activeTargetTitle, setActiveTargetTitle] = useState(DAWIS_TARGET_CONFIGS[0].title);
-  const [activeInfoSections, setActiveInfoSections] = useState(DAWIS_TARGET_CONFIGS[0].infoSections);
+  const [activeTargetTitle, setActiveTargetTitle] = useState(targetConfigs[0].title);
+  const [activeInfoSections, setActiveInfoSections] = useState(targetConfigs[0].infoSections);
   const [activeTargetIsReward, setActiveTargetIsReward] = useState(false);
   const [infoVisible, setInfoVisible] = useState(false);
   const [isCityMapInfoCollapsed, setIsCityMapInfoCollapsed] = useState(false);
@@ -398,6 +497,8 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
     presentationStateRef.current = next;
     if (mountedRef.current) setPresentationState(next);
   }, []);
+
+  useEffect(() => { ecoQuestUnlockedRef.current = ecoQuestUnlocked; }, [ecoQuestUnlocked]);
 
   const focusMapStop = useCallback((stopId: string) => {
     const model = modelRef.current;
@@ -457,15 +558,7 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
     mapFocusAnimationFrameRef.current = null;
     if (infoTimerRef.current !== null) window.clearTimeout(infoTimerRef.current);
     infoTimerRef.current = null;
-    if (mindar) {
-      mindar.renderer.setAnimationLoop(null);
-      mindar.stop();
-      mindar.renderer.dispose?.();
-      const rendererElement = mindar.renderer.domElement;
-      const cssRendererElement = mindar.cssRenderer?.domElement;
-      rendererElement?.parentElement?.removeChild(rendererElement);
-      cssRendererElement?.parentElement?.removeChild(cssRendererElement);
-    }
+    if (mindar) safelyStopMindAR(mindar, containerRef.current);
     if (modelRef.current) { disposeBoard(modelRef.current); modelRef.current = null; }
     modelPivotRef.current = null;
     anchorRef.current = null;
@@ -477,12 +570,12 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
     hasPresentedCurrentTargetRef.current = false;
     latestAnchorMatrixRef.current = null;
     lockedAnchorMatrixRef.current = null;
-    activeTargetConfigRef.current = DAWIS_TARGET_CONFIGS[0];
+    activeTargetConfigRef.current = targetConfigs[0];
     pointerDragRef.current.pointerId = null;
     pointerPointsRef.current.clear();
     pinchDistanceRef.current = null;
     mindarRef.current = null;
-  }, []);
+  }, [targetConfigs]);
 
   const startTracking = useCallback(async () => {
     const attempt = ++attemptRef.current;
@@ -496,8 +589,8 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
     setSelectedMapStopId('eco-park');
     focusedMapStopIdRef.current = null;
     setFocusedMapStopId(null);
-    setActiveTargetTitle(DAWIS_TARGET_CONFIGS[0].title);
-    setActiveInfoSections(DAWIS_TARGET_CONFIGS[0].infoSections);
+    setActiveTargetTitle(targetConfigs[0].title);
+    setActiveInfoSections(targetConfigs[0].infoSections);
     setActiveTargetIsReward(false);
     setIsModelLoading(false);
     setModelLoadError(false);
@@ -507,25 +600,27 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
       setCameraState('secure-context-error');
       return;
     }
+    let mindarForCleanup: MindARInstance | null = null;
     try {
       const { MindARThree } = await import('mind-ar/dist/mindar-image-three.prod.js');
       if (!mountedRef.current || attempt !== attemptRef.current || !containerRef.current) return;
       const mindar = new MindARThree({
         container: containerRef.current,
-        imageTargetSrc: '/ar/targets/dawis-quest.mind',
+        imageTargetSrc: targetBundle,
         uiLoading: 'no',
         uiScanning: 'no',
         uiError: 'no',
         ...DAWIS_MINDAR_TRACKING,
       }) as MindARInstance;
+      mindarForCleanup = mindar;
       mindarRef.current = mindar;
-      const anchors = DAWIS_TARGET_CONFIGS.map((_, targetIndex) => mindar.addAnchor(targetIndex));
+      const anchors = targetConfigs.map((_, targetIndex) => mindar.addAnchor(targetIndex));
       anchorRefsRef.current = anchors;
       latestAnchorMatrixRef.current = new THREE.Matrix4();
       lockedAnchorMatrixRef.current = null;
 
       const targetPivots = new Map<string, THREE.Group>();
-      DAWIS_TARGET_CONFIGS.forEach((target, targetIndex) => {
+      targetConfigs.forEach((target, targetIndex) => {
         const modelPivot = new THREE.Group();
         modelPivot.name = `DHW_ModelPivot_${target.id}`;
         modelPivot.userData.infoSections = target.infoSections;
@@ -647,11 +742,18 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
       };
 
       anchors.forEach((anchor, targetIndex) => {
-        const target = DAWIS_TARGET_CONFIGS[targetIndex];
+        const target = targetConfigs[targetIndex];
         const modelPivot = targetPivots.get(target.id);
         if (!modelPivot) return;
         anchor.onTargetFound = () => {
           if (presentationStateRef.current !== 'SEARCHING' || activeTargetIdRef.current || hasPresentedCurrentTargetRef.current || modelLockedRef.current) return;
+          if (targetSet === 'eco-park' && target.id !== 'eco-park' && !ecoQuestUnlockedRef.current) {
+            setBlockedScanMessage('Scan the Eco Park marker first to unlock trail targets.');
+            onTargetScanned?.(target.id);
+            anchor.group.visible = false;
+            return;
+          }
+          setBlockedScanMessage('');
           activeTargetConfigRef.current = target;
           activeTargetIdRef.current = target.id;
           setActiveTargetId(target.id);
@@ -695,7 +797,11 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
         };
       });
       await mindar.start();
-      if (!mountedRef.current || attempt !== attemptRef.current) return;
+      if (!mountedRef.current || attempt !== attemptRef.current) {
+        if (mindarRef.current === mindar) stopTracking();
+        else safelyStopMindAR(mindar, containerRef.current);
+        return;
+      }
       const video = containerRef.current.querySelector('video');
       if (video) video.className = 'ar-live-video';
       const canvas = containerRef.current.querySelector('canvas');
@@ -714,14 +820,17 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
       });
       setCameraState('active');
     } catch (error) {
+      if (mindarForCleanup) {
+        if (mindarRef.current === mindarForCleanup) stopTracking();
+        else safelyStopMindAR(mindarForCleanup, containerRef.current);
+      }
       if (!mountedRef.current || attempt !== attemptRef.current) return;
-      stopTracking();
       const name = error instanceof DOMException ? error.name : '';
       if (name === 'NotAllowedError' || name === 'SecurityError') setCameraState('denied');
       else if (name === 'NotFoundError' || name === 'NotReadableError') setCameraState('unavailable');
       else setCameraState('tracking-error');
     }
-  }, [onTargetScanned, setPresentation, stopTracking]);
+  }, [onTargetScanned, setPresentation, stopTracking, targetBundle, targetConfigs, targetSet]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -836,6 +945,7 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
   }, [focusedMapStopId]);
 
   const scanAnother = useCallback(() => {
+    setBlockedScanMessage('');
     setPresentation('SCANNING_ANOTHER');
     if (!mindarRef.current || !anchorRef.current) {
       void startTracking();
@@ -868,7 +978,7 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
       anchor.group.matrixWorldNeedsUpdate = true;
     });
     anchorRef.current = null;
-    activeTargetConfigRef.current = DAWIS_TARGET_CONFIGS[0];
+    activeTargetConfigRef.current = targetConfigs[0];
     setSelectedMapStopId('eco-park');
     focusedMapStopIdRef.current = null;
     setFocusedMapStopId(null);
@@ -878,15 +988,16 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
     setIsModelLoading(false);
     setModelLoadError(false);
     setActiveInfoTab('about');
-    setActiveTargetTitle(DAWIS_TARGET_CONFIGS[0].title);
-    setActiveInfoSections(DAWIS_TARGET_CONFIGS[0].infoSections);
+    setActiveTargetTitle(targetConfigs[0].title);
+    setActiveInfoSections(targetConfigs[0].infoSections);
     setActiveTargetIsReward(false);
     setPresentation('SEARCHING');
-  }, [setPresentation, startTracking]);
+  }, [setPresentation, startTracking, targetConfigs]);
 
   const exitCamera = () => { setPresentation('CLOSED'); attemptRef.current += 1; stopTracking(); onBack(); };
   const isSearching = presentationState === 'SEARCHING' || presentationState === 'SCANNING_ANOTHER';
   const isDawisEntryTarget = activeTargetId === 'dawis';
+  const isEcoParkEntryTarget = targetSet === 'eco-park' && activeTargetId === 'eco-park';
   const isCityMapTarget = activeTargetId === 'digos-city-map';
   const selectedMapStop = DIGOS_MAP_STOPS.find((stop) => stop.id === selectedMapStopId) ?? DIGOS_MAP_STOPS[0];
   const currentInfo = activeInfoSections[activeInfoTab];
@@ -894,8 +1005,8 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
   return <div ref={containerRef} className={`screen ar-camera-mode camera-${cameraState} ar-state-${presentationState.toLowerCase()} ${isDawisDetected ? 'target-detected' : ''}`}>
     <div className="ar-camera-gradient" aria-hidden="true" />
     {cameraState === 'active' ? <>
-      <header className="ar-camera-controls"><button type="button" onClick={exitCamera} aria-label="Exit AR camera"><ArrowLeft size={20} /></button><div><small>AR PREVIEW</small><strong>{isSearching ? 'Scanning...' : activeTargetTitle}</strong></div></header>
-       <section className="ar-scanner-stage" aria-label="DigosAR image-target scanner preview"><div className={`ar-scanner-frame ${isSearching ? '' : 'is-detected'}`} aria-hidden="true"><i className="corner top-left" /><i className="corner top-right" /><i className="corner bottom-left" /><i className="corner bottom-right" />{isSearching && <><span className="ar-scan-line" /><span className="ar-target-dot dot-one" /><span className="ar-target-dot dot-two" /></>}</div>{isSearching && <div className="ar-scanner-copy"><strong>Point your camera at a DigosAR marker</strong><span>For the four-stop diorama, scan the separate Digos city-map card.</span></div>}</section>
+      <header className="ar-camera-controls"><button type="button" onClick={exitCamera} aria-label="Exit AR camera"><ArrowLeft size={20} /></button><div><small>{targetSet === 'eco-park' ? 'ECO PARK QUEST' : 'AR PREVIEW'}</small><strong>{isSearching ? 'Scanning...' : activeTargetTitle}</strong></div></header>
+       <section className="ar-scanner-stage" aria-label="DigosAR image-target scanner preview"><div className={`ar-scanner-frame ${isSearching ? '' : 'is-detected'}`} aria-hidden="true"><i className="corner top-left" /><i className="corner top-right" /><i className="corner bottom-left" /><i className="corner bottom-right" />{isSearching && <><span className="ar-scan-line" /><span className="ar-target-dot dot-one" /><span className="ar-target-dot dot-two" /></>}</div>{isSearching && <div className="ar-scanner-copy"><strong>{blockedScanMessage ? 'Eco Park targets are locked' : targetSet === 'eco-park' ? ecoQuestUnlocked ? 'Scan an Eco Park trail target' : 'Scan the Eco Park entry marker' : 'Point your camera at a DigosAR marker'}</strong><span>{blockedScanMessage || (targetSet === 'eco-park' ? ecoQuestUnlocked ? 'Scan the Gateway, Lake Guardian, Heritage Tree, or Barling Wrecks target.' : 'Recognizing the main Eco Park marker unlocks the four trail targets.' : 'For the four-stop diorama, scan the separate Digos city-map card.')}</span></div>}</section>
       {!isSearching && <>
         <section
           className={`ar-info-layer ${isCityMapTarget ? 'is-city-map' : ''} ${infoVisible ? 'is-visible' : ''} ${isCityMapTarget && isCityMapInfoCollapsed ? 'is-collapsed' : ''}`}
@@ -916,11 +1027,11 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest }: { onBac
           }}
           onTouchCancel={() => { mapInfoSwipeStartRef.current = null; }}
         >
-           <div className="ar-info-title-card"><small>{isCityMapTarget ? 'DIGOS CITY · AR MAP' : activeTargetIsReward ? 'REWARD UNLOCKED · DAWIS QUEST' : isDawisEntryTarget ? 'QUEST READY · MARKER FOUND' : 'HERITAGE SITE · DIGOS CITY'}</small><strong>{activeTargetTitle}</strong>{(isModelLoading || modelLoadError || isCityMapTarget || activeTargetIsReward) && <span>{isModelLoading ? `Preparing ${isCityMapTarget ? 'the city diorama' : activeTargetIsReward ? 'your collectible' : 'the mobile model'}…` : modelLoadError ? 'The model could not be loaded. Try scanning again.' : isCityMapTarget ? focusedMapStopId ? `Focused on ${selectedMapStop.label}. Tap it again for the full map; pinch to zoom. Swipe left to hide details.` : 'Lay the marker flat. Tap a place to zoom in; drag to rotate and pinch to zoom. Swipe left to hide details.' : 'Drag to orbit · pinch to inspect your collectible.'}</span>}</div>
-          {!modelLoadError && (isCityMapTarget ? <div className="ar-info-panel ar-city-map-panel"><nav className="ar-city-map-stops" aria-label="Digos city map locations">{DIGOS_MAP_STOPS.map((stop, index) => <button key={stop.id} type="button" aria-pressed={focusedMapStopId === stop.id} aria-label={focusedMapStopId === stop.id ? `Return to full map from ${stop.label}` : `Zoom to ${stop.label}`} className={focusedMapStopId === stop.id ? 'active' : ''} disabled={presentationState !== 'LOCKED' || isModelLoading || modelLoadError} onClick={() => { setSelectedMapStopId(stop.id); focusMapStop(stop.id); }}><span>{String(index + 1).padStart(2, '0')}</span>{stop.label}</button>)}</nav><div className="ar-info-detail"><strong>{selectedMapStop.title}</strong><p>{selectedMapStop.description}</p></div></div> : <div className="ar-info-panel"><div className="ar-info-tabs" role="tablist" aria-label="Dawis information"><>{(Object.keys(activeInfoSections) as InfoTab[]).map((tab) => <button key={tab} type="button" role="tab" aria-selected={activeInfoTab === tab} className={activeInfoTab === tab ? 'active' : ''} onClick={() => setActiveInfoTab(tab)}>{activeInfoSections[tab].label}</button>)}</></div><div className="ar-info-detail"><strong>{currentInfo.title}</strong><p>{currentInfo.body}</p></div></div>)}
+           <div className="ar-info-title-card"><small>{isCityMapTarget ? 'DIGOS CITY · AR MAP' : activeTargetIsReward ? `REWARD UNLOCKED · ${targetSet === 'eco-park' ? 'ECO PARK QUEST' : 'DAWIS QUEST'}` : isDawisEntryTarget || isEcoParkEntryTarget ? 'QUEST READY · MARKER FOUND' : 'HERITAGE SITE · DIGOS CITY'}</small><strong>{activeTargetTitle}</strong>{(isModelLoading || modelLoadError || isCityMapTarget || activeTargetIsReward) && <span>{isModelLoading ? `Preparing ${isCityMapTarget ? 'the city diorama' : activeTargetIsReward ? 'your collectible' : 'the mobile model'}…` : modelLoadError ? 'The model could not be loaded. Try scanning again.' : isCityMapTarget ? focusedMapStopId ? `Focused on ${selectedMapStop.label}. Tap it again for the full map; pinch to zoom. Swipe left to hide details.` : 'Lay the marker flat. Tap a place to zoom in; drag to rotate and pinch to zoom. Swipe left to hide details.' : 'Drag to orbit · pinch to inspect your collectible.'}</span>}</div>
+          {!modelLoadError && (isCityMapTarget ? <div className="ar-info-panel ar-city-map-panel"><nav className="ar-city-map-stops" aria-label="Digos city map locations">{DIGOS_MAP_STOPS.map((stop, index) => <button key={stop.id} type="button" aria-pressed={focusedMapStopId === stop.id} aria-label={focusedMapStopId === stop.id ? `Return to full map from ${stop.label}` : `Zoom to ${stop.label}`} className={focusedMapStopId === stop.id ? 'active' : ''} disabled={presentationState !== 'LOCKED' || isModelLoading || modelLoadError} onClick={() => { setSelectedMapStopId(stop.id); focusMapStop(stop.id); }}><span>{String(index + 1).padStart(2, '0')}</span>{stop.label}</button>)}</nav><div className="ar-info-detail"><strong>{selectedMapStop.title}</strong><p>{selectedMapStop.description}</p></div></div> : <div className="ar-info-panel"><div className="ar-info-tabs" role="tablist" aria-label={`${targetSet === 'eco-park' ? 'Eco Park reward' : 'Dawis'} information`}><>{(Object.keys(activeInfoSections) as InfoTab[]).map((tab) => <button key={tab} type="button" role="tab" aria-selected={activeInfoTab === tab} className={activeInfoTab === tab ? 'active' : ''} onClick={() => setActiveInfoTab(tab)}>{activeInfoSections[tab].label}</button>)}</></div><div className="ar-info-detail"><strong>{currentInfo.title}</strong><p>{currentInfo.body}</p></div></div>)}
         </section>
         {isCityMapTarget && presentationState === 'LOCKED' && isCityMapInfoCollapsed && <button type="button" className="ar-info-reopen" aria-label="Show map information" onClick={() => setIsCityMapInfoCollapsed(false)}><ChevronRight size={22} /></button>}
-         {presentationState === 'LOCKED' && <div className="ar-placement-actions"><div>{isDawisEntryTarget && onOpenQuest ? <><button type="button" onClick={onOpenQuest}>Open Quest</button><button type="button" className="secondary" onClick={exitCamera}>Close</button></> : activeTargetIsReward && onOpenQuest ? <><button type="button" onClick={onOpenQuest}>Return to Quest</button><button type="button" className="secondary" onClick={scanAnother}>Scan another</button></> : <><button type="button" onClick={scanAnother}>Scan another</button><button type="button" className="secondary" onClick={exitCamera}>Close</button></>}</div></div>}
+         {presentationState === 'LOCKED' && <div className="ar-placement-actions"><div>{(isDawisEntryTarget || isEcoParkEntryTarget) && onOpenQuest ? <><button type="button" onClick={onOpenQuest}>Open Quest</button><button type="button" className="secondary" onClick={exitCamera}>Close</button></> : activeTargetIsReward && onOpenQuest ? <><button type="button" onClick={onOpenQuest}>Return to Quest</button><button type="button" className="secondary" onClick={scanAnother}>Scan another</button></> : <><button type="button" onClick={scanAnother}>Scan another</button><button type="button" className="secondary" onClick={exitCamera}>Close</button></>}</div></div>}
       </>}
     </> : <output className="ar-camera-state">{cameraState === 'requesting' ? <><span className="camera-start-icon"><Camera size={28} /></span><h1>Starting camera...</h1></> : cameraState === 'denied' ? <><Camera size={36} /><h1>Camera access is required to use DigosAR.</h1><p>Allow camera permission in your browser, then try again.</p><button type="button" onClick={() => void startTracking()}>Try again</button><button className="secondary" type="button" onClick={exitCamera}>Go back</button></> : cameraState === 'secure-context-error' ? <><Camera size={36} /><h1>Camera access requires HTTPS.</h1><p>Open DigosAR using the Vercel HTTPS link to use AR tracking.</p><button type="button" onClick={() => void startTracking()}>Try again</button><button className="secondary" type="button" onClick={exitCamera}>Go back</button></> : cameraState === 'tracking-error' ? <><Camera size={36} /><h1>Unable to start AR tracking.</h1><p>Check your connection and camera permission, then try again.</p><button type="button" onClick={() => void startTracking()}>Try again</button><button className="secondary" type="button" onClick={exitCamera}>Go back</button></> : <><Camera size={36} /><h1>Camera is unavailable on this device.</h1><p>Check that your device has a camera and that no other app is using it.</p><button type="button" onClick={exitCamera}>Go back</button></>}</output>}
   </div>;

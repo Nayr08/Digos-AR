@@ -13,9 +13,10 @@ type RewardModelViewerProps = {
   modelSrc: string;
   title: string;
   description: string;
+  captionLabel?: string;
 };
 
-export function RewardModelViewer({ modelSrc, title, description }: RewardModelViewerProps) {
+export function RewardModelViewer({ modelSrc, title, description, captionLabel = 'INTERACTIVE REWARD' }: RewardModelViewerProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const pivotRef = useRef<THREE.Group | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -198,10 +199,10 @@ export function RewardModelViewer({ modelSrc, title, description }: RewardModelV
   return <section className="reward-model-viewer" aria-label={`Interactive 3D ${title}`}>
     <div ref={stageRef} className="dawis-model-stage reward-model-stage">
       <div className="dawis-model-sky" aria-hidden="true" />
-      {isLoading && <LoadingSkeleton variant="model" className="dawis-model-loading" label="Preparing your reward…" />}
-      {loadError && <div className="dawis-model-loading"><span>3D reward could not be loaded.</span></div>}
+      {isLoading && <LoadingSkeleton variant="model" className="dawis-model-loading" label={captionLabel === 'INTERACTIVE REWARD' ? 'Preparing your reward…' : 'Preparing 3D preview…'} />}
+      {loadError && <div className="dawis-model-loading"><span>{captionLabel === 'INTERACTIVE REWARD' ? '3D reward could not be loaded.' : '3D model could not be loaded.'}</span></div>}
       {!isLoading && !loadError && <div className="dawis-model-hint"><Rotate3d size={14} /> Drag to rotate · pinch to zoom</div>}
     </div>
-    <div className="reward-model-caption"><small>INTERACTIVE REWARD</small><strong>{title}</strong><p>{description}</p></div>
+    <div className="reward-model-caption"><small>{captionLabel}</small><strong>{title}</strong><p>{description}</p></div>
   </section>;
 }

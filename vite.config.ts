@@ -8,6 +8,10 @@ export default defineConfig(({ command }) => ({
     host: '0.0.0.0',
     port: 3000,
   },
+  optimizeDeps: {
+    // The scanner imports MindAR only when camera tracking starts; prebundle its deep import up front.
+    include: ['mind-ar/dist/mindar-image-three.prod.js'],
+  },
   plugins: [
     tailwindcss(),
     vinext(),
