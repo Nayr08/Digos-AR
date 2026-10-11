@@ -1854,6 +1854,17 @@ html,body{min-height:100%;background:#071a12}body{overflow-x:hidden}.site-shell{
 .phone.dark-phone .eco-target-card-preview a{color:#187b54;font-size:9px;font-weight:850;text-decoration:underline;text-underline-offset:2px}
 .phone.dark-phone .eco-discovery-detail>button{min-height:35px;padding:0 10px;display:flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:10px;color:var(--forest);background:var(--lime);font-size:9px;font-weight:900;cursor:pointer}
 .phone.dark-phone .eco-discovery-detail>button.eco-reward-unlocked{justify-content:flex-start;color:#147a53;background:#eff8e5}
+.phone.dark-phone .eco-discovery-detail .eco-target-marker{width:100%;max-width:170px;margin:0 0 2px;border-color:#dce9d3;background:#10271b}
+.phone.dark-phone .eco-discovery-detail .eco-target-marker a{color:#16845d;background:#10271b}
+.phone.dark-phone .eco-discovery-detail .quest-discovery-hint{margin:0;padding:9px 10px;border-color:#d9f2c3;color:#315b42!important;background:#f4fbe9;font-size:9px!important}
+.phone.dark-phone .eco-discovery-detail .quest-discovery-hint>svg,.phone.dark-phone .eco-discovery-detail .quest-discovery-hint small{color:#16845d}
+.phone.dark-phone .eco-discovery-detail .quest-discovery-hint small{font-size:8px}
+.phone.dark-phone .eco-discovery-detail .quest-discovery-reward{margin:0;padding:8px 9px;background:#faf3dc}
+.phone.dark-phone .eco-discovery-detail .quest-discovery-reward small{color:#987018;font-size:7px}
+.phone.dark-phone .eco-discovery-detail .quest-discovery-reward strong{color:var(--forest);font-size:10px}
+.phone.dark-phone .eco-discovery-detail .quest-discovery-reward em{color:var(--text-secondary);font-size:9px}
+.phone.dark-phone .eco-discovery-detail .quest-discovery-reward>button{min-height:30px;padding:0 10px;border:0;border-radius:9px;color:var(--forest);background:var(--lime);font-size:8px;font-weight:900}
+.phone.dark-phone .eco-discovery-detail>.eco-target-scanned{min-height:0;padding:0;color:#16845d;background:transparent;font-size:8px;font-weight:800}
 .phone.dark-phone .eco-quest-standard-screen{min-height:0;flex:1 1 auto;overflow-y:auto;overscroll-behavior:contain;padding:0 14px calc(18px + env(safe-area-inset-bottom));background:var(--background)}
 .phone.dark-phone .eco-quest-standard-screen .quest-explorer-header{position:sticky;z-index:3;top:0;margin:0 -14px 14px;padding:7px 14px;background:rgba(255,253,247,.97);box-shadow:0 6px 14px rgba(23,58,46,.06)}
 .phone.dark-phone .eco-quest-standard-screen .quest-explorer-header h1{color:var(--forest)}
@@ -1867,12 +1878,6 @@ html,body{min-height:100%;background:#071a12}body{overflow-x:hidden}.site-shell{
   .phone.dark-phone .eco-quest-map .quest-full-map-pin.eco-wrecks{left:48%;top:34%}
   .phone.dark-phone .eco-discovery-detail{padding-left:48px}
 }
-
-/* Let the main scanner choose which printed marker collection to recognize. */
-.ar-target-set-picker{min-width:0;position:absolute;z-index:4;top:calc(env(safe-area-inset-top) + 65px);left:50%;margin:0;display:flex;gap:4px;padding:4px;border:1px solid rgba(255,255,255,.2);border-radius:14px;background:rgba(7,26,18,.68);box-shadow:0 8px 24px rgba(0,0,0,.18);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);transform:translateX(-50%)}
-.ar-target-set-picker>legend{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.ar-target-set-picker>button{min-width:82px;height:32px;padding:0 12px;border:0;border-radius:10px;color:#e7eee8;background:transparent;font-size:11px;font-weight:800;cursor:pointer;touch-action:manipulation}
-.ar-target-set-picker>button[aria-pressed="true"]{color:#071a12;background:#9bff57;box-shadow:0 2px 8px rgba(155,255,87,.25)}
 
 /* The info card slides off-screen from its close button and can be reopened. */
 .ar-info-layer.is-collapsed{transform:translate(calc(-50% - 110vw),0);opacity:0;pointer-events:none}

@@ -523,7 +523,7 @@ export default function DigosAR() {
   const ecoParkQuestUnlockedRef = useRef(false);
   const [resumeQuestOnReturn, setResumeQuestOnReturn] = useState(false);
   const [resumeEcoQuestOnReturn, setResumeEcoQuestOnReturn] = useState(false);
-  const [arTargetSet, setArTargetSet] = useState<'dawis' | 'eco-park'>('dawis');
+  const [arTargetSet, setArTargetSet] = useState<'dawis' | 'eco-park' | 'global'>('global');
   const [questUnlockToast, setQuestUnlockToast] = useState('');
   const questUnlockToastTimerRef = useRef<number | null>(null);
   const [achievementToast, setAchievementToast] = useState<AchievementToast | null>(null);
@@ -659,7 +659,7 @@ export default function DigosAR() {
       return;
     }
     pendingNavigationRef.current = null;
-    if (next === 'ar' && screen !== 'quest') setArTargetSet('dawis');
+    if (next === 'ar' && screen !== 'quest') setArTargetSet('global');
     if (protectedScreens.has(next) && !user) {
       if (authRedirectTimerRef.current !== null) return;
       setAuthToast('You need to log in first.');
@@ -707,14 +707,12 @@ export default function DigosAR() {
     notifyNewAchievements(freshGameData, previouslyEarned);
   }, [notifyNewAchievements, refreshChallengeProgress, refreshDashboardStats, refreshGameData, refreshProfile, user]);
   const recordTargetScan = useCallback((targetId: string) => {
-    const isEcoTarget = arTargetSet === 'eco-park';
     const ecoDiscoveryIds = new Set(['eco-trail-gateway', 'eco-lake-guardian', 'eco-heritage-tree', 'eco-barling-wrecks']);
-    const locationTargets = isEcoTarget
-      ? new Set([...ecoDiscoveryIds, 'eco-park'])
-      : new Set(['dawis', 'old-dawis', 'terminal-platform', 'mooring-bollards', 'support-piles', 'shoreline-rocks']);
-    if (!locationTargets.has(targetId)) return;
     const discoveryIds = new Set(['terminal-platform', 'mooring-bollards', 'support-piles', 'shoreline-rocks']);
-    if (!isEcoTarget && discoveryIds.has(targetId) && !dawisQuestUnlockedRef.current) {
+    const isEcoTarget = ecoDiscoveryIds.has(targetId) || targetId === 'eco-park';
+    const isDawisTarget = discoveryIds.has(targetId) || ['dawis', 'old-dawis', 'digos-city-map'].includes(targetId);
+    if (!isEcoTarget && !isDawisTarget) return;
+    if (isDawisTarget && discoveryIds.has(targetId) && !dawisQuestUnlockedRef.current) {
       setQuestUnlockToast('Scan the main Dawis marker first to unlock the four targets.');
       if (questUnlockToastTimerRef.current !== null) window.clearTimeout(questUnlockToastTimerRef.current);
       questUnlockToastTimerRef.current = window.setTimeout(() => setQuestUnlockToast(''), 4200);
@@ -805,7 +803,7 @@ export default function DigosAR() {
       ]);
       notifyNewAchievements(freshGameData, previouslyEarned);
     })().catch((error) => console.error('[DigosAR Progress] Scan progress refresh failed', error));
-  }, [arTargetSet, notifyNewAchievements, refreshChallengeProgress, refreshDashboardStats, refreshGameData, refreshProfile, spots, user]);
+  }, [notifyNewAchievements, refreshChallengeProgress, refreshDashboardStats, refreshGameData, refreshProfile, spots, user]);
   const openAR = (d: Destination, targetSet: 'dawis' | 'eco-park' = 'dawis') => {
     setArTargetSet(targetSet);
     if (user && d.id && d.slug !== 'dawis-heritage-wharf') {
@@ -955,7 +953,7 @@ export default function DigosAR() {
   if (screen === 'home') content = <HomeScreen go={go} open={open} openMap={openMap} spots={spots} displayName={profile?.display_name || 'Explorer'} challengeProgress={challengeProgress} />;
   else if (screen === 'explore') content = <ExploreScreen open={open} spots={spots} />;
   else if (screen === 'details') content = <DetailsScreen spot={spot} go={go} openMap={openMapForSpot} />;
-  else if (screen === 'ar') content = <ARCameraScreen targetSet={arTargetSet} ecoQuestUnlocked={ecoParkQuestUnlocked} showTargetSetPicker={previous !== 'quest'} onTargetSetChange={setArTargetSet} onBack={() => go(previous === 'ar' ? 'home' : previous)} onTargetScanned={recordTargetScan} onOpenQuest={() => go('quest')} />;
+  else if (screen === 'ar') content = <ARCameraScreen targetSet={arTargetSet} ecoQuestUnlocked={ecoParkQuestUnlocked} onBack={() => go(previous === 'ar' ? 'home' : previous)} onTargetScanned={recordTargetScan} onOpenQuest={() => go('quest')} />;
   else if (screen === 'navigation') content = <NavigationScreen spot={spot} go={go} />;
   else if (screen === 'model') content = <ModelScreen spot={spot} go={go} />;
   else if (screen === 'quest') content = <QuestExplorer spots={spots} unlockedSlugs={unlockedQuestSlugs} questUnlocked={dawisQuestUnlocked} ecoQuestUnlocked={ecoParkQuestUnlocked} userId={user?.id} scanSpot={(selectedSpot, targetSet = 'dawis') => { setResumeQuestOnReturn(targetSet === 'dawis'); setResumeEcoQuestOnReturn(targetSet === 'eco-park'); openAR(selectedSpot, targetSet); }} onComplete={handleQuestComplete} resumeQuest={resumeQuestOnReturn} onResumeQuestConsumed={() => setResumeQuestOnReturn(false)} resumeEcoQuest={resumeEcoQuestOnReturn} onResumeEcoQuestConsumed={() => setResumeEcoQuestOnReturn(false)} />;

@@ -9,6 +9,7 @@
     "dev": "vinext dev",
     "build": "vite build",
     "start": "vinext start",
+    "compile:ar-global": "node tools/compile-global-ar-targets.mjs",
     "lint": "oxlint",
     "format": "oxfmt"
   },
