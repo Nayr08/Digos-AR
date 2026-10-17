@@ -5,6 +5,7 @@ import { ArrowLeft, Camera, ChevronRight, X } from 'lucide-react';
 import * as THREE from 'three';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { applyEcoParkModelMaterials } from '@/lib/eco-park-model-materials';
 
 type PresentationState = 'SEARCHING' | 'PRESENTING' | 'LOCKED' | 'SCANNING_ANOTHER' | 'CLOSED';
 type InfoTab = 'about' | 'history' | 'location' | 'fact';
@@ -31,6 +32,7 @@ type DawisTargetConfig = {
   title: string;
   modelSrc?: string;
   modelFootprint?: number;
+  modelRotationX?: number;
   isReward?: boolean;
   kind?: 'city-map';
   infoSections: Record<InfoTab, { label: string; title: string; body: string }>;
@@ -153,11 +155,12 @@ const ECO_PARK_TARGET_CONFIGS: DawisTargetConfig[] = [
     title: 'Digos City Eco Park and Arboretum',
     modelSrc: '/ar/models/ecopark.glb?v=eco-park-c-shape-2026-10',
     modelFootprint: 0.72,
+    modelRotationX: Math.PI / 5,
     infoSections: {
-      about: { label: 'About', title: 'Eco Park and Arboretum', body: 'A green space with a park lake, garden paths, mature trees, and places to pause outdoors.' },
-      history: { label: 'Care', title: 'Explore gently', body: 'Stay on public paths, follow posted park guidance, and leave plants and wildlife undisturbed.' },
-      location: { label: 'Trail', title: 'Start the Green Quest', body: 'Scan this Eco Park marker to unlock the four trail targets and their 3D rewards.' },
-      fact: { label: 'Trail', title: 'Choose any trail target', body: 'Once this Eco Park marker unlocks the quest, you can scan the four trail targets in any order.' },
+      about: { label: 'About', title: 'Digos City Eco Park and Arboretum', body: 'Set in Sitio San Nicolas, Tres de Mayo, this city green space brings together an arboretum, a park lake, and visitor paths.' },
+      history: { label: 'History', title: 'A place for nature and learning', body: 'The city developed the Eco Park and Arboretum for conservation, recreation, and environmental activities.' },
+      location: { label: 'Location', title: 'Sitio San Nicolas, Tres de Mayo', body: 'Digos City, Davao del Sur. Follow posted park guidance for access and current facilities.' },
+      fact: { label: 'Fun Fact', title: 'An arboretum in the city', body: 'Tree planting and nature education are part of the park’s role alongside outdoor recreation.' },
     },
   },
   {
@@ -167,10 +170,10 @@ const ECO_PARK_TARGET_CONFIGS: DawisTargetConfig[] = [
     modelFootprint: 0.72,
     isReward: true,
     infoSections: {
-      about: { label: 'Discovery', title: 'Eco Trail Key', body: 'A keepsake for starting the Eco Park Green Quest. Follow the park visitor path and scan the four trail markers.' },
-      history: { label: 'Care', title: 'Explore gently', body: 'Stay on designated paths, leave plants and wildlife undisturbed, and carry litter out of the park.' },
-      location: { label: 'Trail', title: 'Eco Park entrance', body: 'Start at the park gateway, then follow the illustrated route to each stop.' },
-      fact: { label: 'Trail', title: 'Choose any trail target', body: 'Explore the four Eco Park discovery markers in any order after scanning the park entrance marker.' },
+      about: { label: 'About', title: 'Eco Trail Key', body: 'A keepsake for starting the Eco Park Green Quest. Follow the park visitor path and scan the four trail markers.' },
+      history: { label: 'History', title: 'Explore gently', body: 'Stay on designated paths, leave plants and wildlife undisturbed, and carry litter out of the park.' },
+      location: { label: 'Location', title: 'Eco Park entrance', body: 'Start at the park gateway, then follow the illustrated route to each stop.' },
+      fact: { label: 'Fun Fact', title: 'Choose any trail target', body: 'Explore the four Eco Park discovery markers in any order after scanning the park entrance marker.' },
     },
   },
   {
@@ -180,10 +183,10 @@ const ECO_PARK_TARGET_CONFIGS: DawisTargetConfig[] = [
     modelFootprint: 0.72,
     isReward: true,
     infoSections: {
-      about: { label: 'Discovery', title: 'Lake Guardian', body: 'A 3D keepsake from the Eco Park lake stop. Look for the lake edge and observe the park’s water habitat.' },
-      history: { label: 'Care', title: 'Keep the water healthy', body: 'Leave plants and wildlife undisturbed, and carry litter out of the park.' },
-      location: { label: 'Trail', title: 'Eco Park lake', body: 'Use the designated visitor path around the water.' },
-      fact: { label: 'Trail', title: 'Choose any trail target', body: 'Explore the four Eco Park discovery markers in any order after scanning the park entrance marker.' },
+      about: { label: 'About', title: 'Lake Guardian', body: 'A 3D keepsake from the Eco Park lake stop. Look for the lake edge and observe the park’s water habitat.' },
+      history: { label: 'History', title: 'Keep the water healthy', body: 'Leave plants and wildlife undisturbed, and carry litter out of the park.' },
+      location: { label: 'Location', title: 'Eco Park lake', body: 'Use the designated visitor path around the water.' },
+      fact: { label: 'Fun Fact', title: 'Choose any trail target', body: 'Explore the four Eco Park discovery markers in any order after scanning the park entrance marker.' },
     },
   },
   {
@@ -193,10 +196,10 @@ const ECO_PARK_TARGET_CONFIGS: DawisTargetConfig[] = [
     modelFootprint: 0.72,
     isReward: true,
     infoSections: {
-      about: { label: 'Discovery', title: 'Century-old Heritage Tree', body: 'A 3D keepsake for the living landmark stop. Appreciate the tree from the visitor path and avoid disturbing its roots.' },
-      history: { label: 'Care', title: 'Protect a living landmark', body: 'Stay behind barriers and follow any park guidance around the tree.' },
-      location: { label: 'Trail', title: 'Eco Park arboretum', body: 'Look for the heritage tree along the Eco Park trail.' },
-      fact: { label: 'Trail', title: 'Choose any trail target', body: 'Explore the four Eco Park discovery markers in any order after scanning the park entrance marker.' },
+      about: { label: 'About', title: 'Century-old Heritage Tree', body: 'A 3D keepsake for the living landmark stop. Appreciate the tree from the visitor path and avoid disturbing its roots.' },
+      history: { label: 'History', title: 'Protect a living landmark', body: 'Stay behind barriers and follow any park guidance around the tree.' },
+      location: { label: 'Location', title: 'Eco Park arboretum', body: 'Look for the heritage tree along the Eco Park trail.' },
+      fact: { label: 'Fun Fact', title: 'Choose any trail target', body: 'Explore the four Eco Park discovery markers in any order after scanning the park entrance marker.' },
     },
   },
   {
@@ -206,10 +209,10 @@ const ECO_PARK_TARGET_CONFIGS: DawisTargetConfig[] = [
     modelFootprint: 0.72,
     isReward: true,
     infoSections: {
-      about: { label: 'Discovery', title: 'Barling Wrecks', body: 'A 3D keepsake for the wrecks stop. Observe the remains from the designated visitor area.' },
-      history: { label: 'Care', title: 'Respect the site', body: 'Do not climb on, touch, or remove material from the wrecks.' },
-      location: { label: 'Trail', title: 'Eco Park trail', body: 'Follow posted access guidance to the Barling wrecks viewing area.' },
-      fact: { label: 'Trail', title: 'All four targets found', body: 'Return to the quest to review all four finds and take the park quiz.' },
+      about: { label: 'About', title: 'Barling Wrecks', body: 'A 3D keepsake for the wrecks stop. Observe the remains from the designated visitor area.' },
+      history: { label: 'History', title: 'Respect the site', body: 'Do not climb on, touch, or remove material from the wrecks.' },
+      location: { label: 'Location', title: 'Eco Park trail', body: 'Follow posted access guidance to the Barling wrecks viewing area.' },
+      fact: { label: 'Fun Fact', title: 'All four targets found', body: 'Return to the quest to review all four finds and take the park quiz.' },
     },
   },
 ];
@@ -373,9 +376,10 @@ function tuneDawisMaterials(model: THREE.Object3D) {
   });
 }
 
-function prepareDawisModel(model: THREE.Object3D, targetFootprint = 2.65, centerOnTarget = false) {
+function prepareDawisModel(model: THREE.Object3D, targetFootprint = 2.65, centerOnTarget = false, modelRotationX = 0, isEcoPark = false) {
   model.name = 'DHW_AR_Model';
   tuneDawisMaterials(model);
+  if (isEcoPark) applyEcoParkModelMaterials(model);
   model.traverse((child) => {
     const mesh = child as THREE.Mesh;
     if (mesh.isMesh) {
@@ -391,6 +395,7 @@ function prepareDawisModel(model: THREE.Object3D, targetFootprint = 2.65, center
   const sourceSize = sourceBox.getSize(new THREE.Vector3());
   const footprint = Math.max(sourceSize.x, sourceSize.z);
   if (footprint > 0) model.scale.setScalar(targetFootprint / footprint);
+  model.rotation.x = modelRotationX;
   model.updateMatrixWorld(true);
 
   // Center the footprint on the image target. Rewards float around its center;
@@ -632,10 +637,11 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest, targetSet
         anchors[targetIndex].group.add(modelPivot);
         targetPivots.set(target.id, modelPivot);
 
-        const ambient = new THREE.AmbientLight(0xffffff, 1.8);
-        const warmKey = new THREE.DirectionalLight(0xffe2b0, 2.2);
+        const isEcoParkModel = target.id === 'eco-park';
+        const ambient = new THREE.AmbientLight(0xffffff, isEcoParkModel ? 1.2 : 1.8);
+        const warmKey = new THREE.DirectionalLight(0xffe2b0, isEcoParkModel ? 1.35 : 2.2);
         warmKey.position.set(1.5, 2.5, 2);
-        const fill = new THREE.DirectionalLight(0x9bd7ff, 0.8);
+        const fill = new THREE.DirectionalLight(0x9bd7ff, isEcoParkModel ? 0.55 : 0.8);
         fill.position.set(-2, 1, 1);
         modelPivot.add(ambient, warmKey, fill);
       });
@@ -653,7 +659,7 @@ export function ARCameraScreen({ onBack, onTargetScanned, onOpenQuest, targetSet
         const loading = target.kind === 'city-map'
           ? buildDigosMapScene(gltfLoader)
           : target.modelSrc
-            ? gltfLoader.loadAsync(target.modelSrc).then((gltf) => prepareDawisModel(gltf.scene, target.modelFootprint, target.isReward))
+            ? gltfLoader.loadAsync(target.modelSrc).then((gltf) => prepareDawisModel(gltf.scene, target.modelFootprint, target.isReward, target.modelRotationX, target.id === 'eco-park'))
             : Promise.reject(new Error(`No model configured for ${target.id}`));
         void loading.then((model) => {
           if (!mountedRef.current || attempt !== attemptRef.current || modelGeneration !== modelGenerationRef.current || mindarRef.current !== mindar) {

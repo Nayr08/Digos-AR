@@ -6,6 +6,7 @@ import { LoadingSkeleton } from '@/components/loading-skeleton';
 import * as THREE from 'three';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { applyEcoParkModelMaterials } from '@/lib/eco-park-model-materials';
 
 type PointerPoint = { x: number; y: number };
 
@@ -17,6 +18,7 @@ type RewardModelViewerProps = {
 };
 
 export function RewardModelViewer({ modelSrc, title, description, captionLabel = 'INTERACTIVE REWARD' }: RewardModelViewerProps) {
+  const isEcoParkModel = modelSrc.includes('/ecopark.glb');
   const stageRef = useRef<HTMLDivElement>(null);
   const pivotRef = useRef<THREE.Group | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -43,12 +45,12 @@ export function RewardModelViewer({ modelSrc, title, description, captionLabel =
     renderer.domElement.className = 'dawis-model-canvas';
     stage.appendChild(renderer.domElement);
 
-    scene.add(new THREE.HemisphereLight(0xf0f8ff, 0x173323, 2.2));
-    const keyLight = new THREE.DirectionalLight(0xfff0d2, 3.5);
+    scene.add(new THREE.HemisphereLight(0xf0f8ff, 0x173323, isEcoParkModel ? 1.25 : 2.2));
+    const keyLight = new THREE.DirectionalLight(0xfff0d2, isEcoParkModel ? 1.8 : 3.5);
     keyLight.position.set(4, 7, 5);
     keyLight.castShadow = true;
     scene.add(keyLight);
-    const fillLight = new THREE.DirectionalLight(0x8ad8ff, 1.4);
+    const fillLight = new THREE.DirectionalLight(0x8ad8ff, isEcoParkModel ? 0.6 : 1.4);
     fillLight.position.set(-5, 3, -4);
     scene.add(fillLight);
 
@@ -88,6 +90,7 @@ export function RewardModelViewer({ modelSrc, title, description, captionLabel =
           if ('metalness' in material) material.metalness = Math.min(Number(material.metalness) || 0, 0.35);
         });
       });
+      if (isEcoParkModel) applyEcoParkModelMaterials(model);
 
       const sourceBox = new THREE.Box3().setFromObject(model);
       const sourceSize = sourceBox.getSize(new THREE.Vector3());
@@ -194,7 +197,7 @@ export function RewardModelViewer({ modelSrc, title, description, captionLabel =
       pivotRef.current = null;
       cameraRef.current = null;
     };
-  }, [modelSrc]);
+  }, [isEcoParkModel, modelSrc]);
 
   return <section className="reward-model-viewer" aria-label={`Interactive 3D ${title}`}>
     <div ref={stageRef} className="dawis-model-stage reward-model-stage">
