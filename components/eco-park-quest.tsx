@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import { Award, Check, CheckCircle2, ChevronLeft, ChevronRight, Leaf, MapPin, Navigation, Trophy } from 'lucide-react';
+import { Award, Check, CheckCircle2, ChevronLeft, ChevronRight, Leaf, MapPin, Navigation, Sparkles, Trophy } from 'lucide-react';
 import { loadQuestForSpot, type Destination, type SpotQuest } from '@/lib/digosar-data';
 import { loadQuestProgress, saveQuestProgress, type SyncedQuestProgress } from '@/lib/quest-progress';
 import { supabase } from '@/lib/supabase';
@@ -15,8 +15,9 @@ type EcoDiscovery = {
   title: string;
   kicker: string;
   description: string;
-  prompt: string;
+  hint: string;
   reward: string;
+  rewardCopy: string;
   modelSrc: string;
   markerSrc: string;
   pinClass: string;
@@ -31,8 +32,9 @@ const ECO_DISCOVERIES: EcoDiscovery[] = [
     title: 'Eco Park Gateway',
     kicker: '01 · START THE GREEN TRAIL',
     description: 'Begin at the park entrance and follow the visitor path toward the lake, heritage tree, and Barling wrecks.',
-    prompt: 'The Eco Trail Key is unlocked and ready to view in 3D.',
+    hint: 'Tree planting supports conservation and environmental learning.',
     reward: 'Eco Trail Key',
+    rewardCopy: 'Your first collectible for the Green Trail.',
     modelSrc: '/ar/rewards/gold-key.glb',
     markerSrc: '/ar/targets/eco-quest/eco-trail-gateway.webp',
     pinClass: 'eco-gateway',
@@ -43,8 +45,9 @@ const ECO_DISCOVERIES: EcoDiscovery[] = [
     title: 'Park lake',
     kicker: '02 · THE WATER EDGE',
     description: 'Take in the lake and the park landscape around it. Notice how the paths and planted areas meet the water.',
-    prompt: 'The Lake Guardian is unlocked and ready to view in 3D.',
+    hint: 'Staying on designated paths helps protect plants and habitat.',
     reward: 'Lake Guardian',
+    rewardCopy: 'A guardian keepsake from the park lake.',
     modelSrc: '/ar/rewards/lake-guardian.glb',
     markerSrc: '/ar/targets/eco-quest/lake-guardian.webp',
     pinClass: 'eco-lake',
@@ -55,8 +58,9 @@ const ECO_DISCOVERIES: EcoDiscovery[] = [
     title: 'Century-old Heritage Tree',
     kicker: '03 · A LIVING LANDMARK',
     description: 'Look at the heritage tree’s trunk and canopy from the visitor path. Follow any posted guidance around its roots.',
-    prompt: 'The Heritage Tree is unlocked and ready to view in 3D.',
+    hint: 'An arboretum cultivates trees and woody plants for study and conservation.',
     reward: 'Heritage Tree',
+    rewardCopy: 'A keepsake honoring the Eco Park’s mature tree.',
     modelSrc: '/ar/rewards/century-tree.glb',
     markerSrc: '/ar/targets/eco-quest/heritage-tree.webp',
     pinClass: 'eco-tree',
@@ -67,8 +71,9 @@ const ECO_DISCOVERIES: EcoDiscovery[] = [
     title: 'Barling wrecks',
     kicker: '04 · WRECKS BY THE PARK',
     description: 'Explore the Barling wrecks stop and observe the remains from the designated visitor area.',
-    prompt: 'The Barling Wrecks are unlocked and ready to view in 3D.',
+    hint: 'The Eco Park supports community gatherings and public activities.',
     reward: 'Barling Wrecks',
+    rewardCopy: 'A 3D keepsake from the Barling wrecks stop.',
     modelSrc: '/ar/rewards/barling_wrecks.glb',
     markerSrc: '/ar/targets/eco-quest/barling-wrecks.webp',
     pinClass: 'eco-wrecks',
@@ -77,6 +82,13 @@ const ECO_DISCOVERIES: EcoDiscovery[] = [
 ];
 
 const ECO_DISCOVERY_IDS = new Set(ECO_DISCOVERIES.map((item) => item.id));
+
+function EcoTargetMarker({ source, title }: { source: string; title: string }) {
+  return <div className="quest-target-marker eco-target-marker">
+    {/* oxlint-disable-next-line next/no-img-element */}<img src={source} alt={`${title} target marker`} />
+    <a href={source} download>{`Save ${title} marker`}</a>
+  </div>;
+}
 
 function normalizeEcoDiscoveries(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
@@ -387,8 +399,11 @@ export function EcoParkQuest({
                     </button>
                     {selected && questUnlocked && <div className="eco-discovery-detail">
                       {!found ? <div className="quest-discovery-guide-preview">{/* oxlint-disable-next-line next/no-img-element */}<img src={item.markerSrc} alt={`${item.title} marker to find`} /><p>Find this marker in AR first. Scan it to reveal the story and 3D reward.</p></div> : <>
-                        <p>{item.description}</p><small>{item.prompt}</small>
-                        <button type="button" className="eco-reward-unlocked" onClick={() => setActiveReward(item)}><CheckCircle2 size={15} /> {item.reward} unlocked · View 3D</button>
+                        <EcoTargetMarker source={item.markerSrc} title={item.title} />
+                        <p>{item.description}</p>
+                        <div className="quest-discovery-hint"><Sparkles size={15} /><span><small>QUIZ HINT</small>{item.hint}</span></div>
+                        <div className="quest-discovery-reward"><span className="quest-reward-icon"><CheckCircle2 size={17} /></span><span className="quest-reward-copy"><small>REWARD UNLOCKED</small><strong>{item.reward}</strong><em>{item.rewardCopy}</em></span><button type="button" aria-label={`Open the 3D ${item.reward}`} onClick={() => setActiveReward(item)}>View 3D</button></div>
+                        <span className="eco-target-scanned"><CheckCircle2 size={14} /> Target scanned</span>
                       </>}
                     </div>}
                   </article>;
